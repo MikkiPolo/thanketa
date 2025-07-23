@@ -188,6 +188,9 @@ export default function App() {
 
   const { title, hint, field } = questions[step];
   const progress = ((step + 1) / questions.length) * 100;
+  if (!tgId) {
+  return <div className="app">Доступ запрещен</div>;
+}
 
   if (loading) return <div className="app">Загрузка...</div>;
 
