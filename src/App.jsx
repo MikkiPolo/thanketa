@@ -9,15 +9,12 @@ const questions = [
     field: "figura",
     hint: (
       <>
-        Например: Яблоко (O), Треугольник (A), Перевернутый треугольник (V), Прямоугольник (H), «Песочные часы» (X)
-        <br />
-        Если не уверена — ничего страшного!
-        <br />
-        Этот бот поможет:{" "}
-        <a href="https://t.me/figuralnabot" target="_blank" rel="noopener noreferrer">
-          @figuralnabot
-        </a>
-      </>
+      <strong>Например:</strong> Яблоко (O), Треугольник (A), Перевернутый треугольник (V),<br />
+      Прямоугольник (H), «Песочные часы» (X)<br /><br />
+      Если не уверена — ничего страшного!<br /><br />
+      Этот бот поможет:{" "}
+      <a href="https://t.me/figuralnabot" target="_blank" rel="noopener noreferrer">@figuralnabot</a>
+    </>
     ),
   },
   {
@@ -25,10 +22,10 @@ const questions = [
     field: "cvetotip",
     hint: (
       <>
-        Например: тёплая весна, холодное лето
-        <br />
+        <strong>Например:</strong> тёплая весна, холодное лето
+        <br /><br />
         Если не уверена — ничего страшного!
-        <br />
+        <br /><br />
         Этот бот поможет:{" "}
         <a href="https://t.me/chrommabot" target="_blank" rel="noopener noreferrer">
           @chrommabot
@@ -42,7 +39,7 @@ const questions = [
     field: "predpochtenia_v_stile",
     hint: (
       <>
-        Например:
+        <strong>Например:</strong>
         <br />• повседневный (casual)<br />• классика или офисный стиль<br />• спорт-шик<br />• бохо<br />• минимализм<br />• романтичный<br />• пока не знаю, хочу понять
       </>
     ),
@@ -52,7 +49,7 @@ const questions = [
     field: "change",
     hint: (
       <>
-        Например:
+        <strong>Например:</strong>
         <br />• Хочу выглядеть более женственно<br />• Хочется обновить гардероб<br />• Не уверена, но чувствую, что нужно что-то новое<br />• Просто хочется понять, что мне подходит
       </>
     ),
@@ -60,12 +57,22 @@ const questions = [
   {
     title: "Какие части тела тебе хочется подчеркнуть?",
     field: "like_zone",
-    hint: "Например: Талия и ключицы. Если не знаешь — так и напиши: не знаю.",
+    hint:(
+      <>
+      <strong>Например:</strong> Талия и ключицы.<br />
+      Если не знаешь — так и напиши: не знаю.
+      </>
+    ),
   },
   {
     title: "Какие зоны ты предпочла бы скрыть?",
     field: "dislike_zone",
-    hint: "Например: живот и бёдра. Если не знаешь — так и напиши: не знаю.",
+    hint:(
+      <>
+      <strong>Например:</strong> живот и бёдра. <br/>
+      Если не знаешь — так и напиши: не знаю.
+      </>
+    ),
   },
 ];
 
@@ -134,7 +141,7 @@ export default function App() {
       if (step < questions.length - 1) {
         setStep(step + 1);
       } else {
-        fetch("https://lipolo.ru/webhook-test/anketa_save", {
+        fetch("https://lipolo.ru/webhook/anketa_save", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ telegram_id: tgId, ...form }),
@@ -181,66 +188,88 @@ export default function App() {
   if (loading) return <div className="app">Загрузка...</div>;
 
   if (!started && !viewing) {
-    return (
-      <div className="app">
-        <div className="card">
-          <div style={{ fontSize: "1.4rem", marginBottom: "1rem" }}>
-            {existingProfile?.name ? `Привет, ${existingProfile.name}!` : "Добро пожаловать!"}
-          </div>
-          <div style={{ display: "flex", gap: "1rem" }}>
-            {!existingProfile && (
-              <button onClick={handleStart} className="next">
-                Заполнить анкету
-              </button>
-            )}
-            {existingProfile && (
-              <button onClick={handleViewProfile} className="next">
-                Просмотреть анкету
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  }
-  if (viewing && existingProfile) {
   return (
     <div className="app">
-      <div className="card">
-        <h2 style={{ marginBottom: '1rem' }}>Твоя анкета</h2>
-        <ul style={{ textAlign: 'left', fontSize: '1rem', lineHeight: '1.6' }}>
-          {questions.map(q => (
-            <li key={q.field}><strong>{q.title}</strong>: {existingProfile[q.field] || '—'}</li>
-          ))}
-        </ul>
-        <div className="buttons" style={{ marginTop: '1.5rem' }}>
-          <button className="cancel" onClick={() => setViewing(false)}>Назад</button>
-          <button className="next" onClick={handleStart}>Изменить анкету</button>
+      <div className="card" style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center" }}>
+        <div className="logo" style={{ marginTop: "0.5rem", marginBottom: "0.7rem" }}>
+          <img src="/vite.svg" alt="logo" style={{ width: 36, height: 36 }} />
+        </div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "1.7rem" }}>
+          <div className="progress-bar" style={{ flex: 1, maxWidth: 220, margin: "0 auto" }}>
+            <div className="progress" style={{ width: `0%` }} />
+          </div>
+        </div>
+        <div style={{ fontSize: "1.4rem", marginBottom: "1rem", textAlign: "center" }}>
+          {existingProfile?.name ? `Привет, ${existingProfile.name}!` : "Добро пожаловать!"}
+        </div>
+        <div style={{ 
+          display: "flex",
+          flexDirection: "column",
+          gap: "1rem", 
+          justifyContent: "center",
+          alignItems: "stretch",
+          width: "100%",
+          maxWidth: 320,
+          margin: "0 auto"
+          }}>
+        <div className="buttons" style={{ marginTop: "1.5rem" }}>
+          {!existingProfile || !existingProfile.name && (
+            <button onClick={handleStart} className="next">
+              Заполнить анкету
+            </button>
+          )}
+          {existingProfile?.name && (
+            <button onClick={handleViewProfile} className="next">
+              Просмотреть анкету
+            </button>
+          )}
+          </div>
         </div>
       </div>
     </div>
   );
+}
   if (editing && existingProfile) {
   return (
     <div className="app">
       <div className="card">
-        <h2 style={{ marginBottom: "1rem" }}>Редактировать анкету</h2>
+        <div className="logo" style={{ marginTop: "0.5rem", marginBottom: "0.7rem" }}>
+          <img src="/vite.svg" alt="logo" style={{ width: 36, height: 36 }} />
+        </div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "1.7rem" }}>
+          <div className="progress-bar" style={{ flex: 1, maxWidth: 220, margin: "0 auto" }}>
+            <div className="progress" style={{ width: `100%` }} />
+          </div>
+        </div>
+        <h2 style={{ marginBottom: '1rem', textAlign: "center" }}>Редактировать анкету</h2>
         <form
-          onSubmit={(e) => {
+          onSubmit={e => {
             e.preventDefault();
-            handleSaveEditedProfile();
+            handleSaveEditedProfile(); // твоя функция сохранения
           }}
-          style={{ display: "flex", flexDirection: "column", gap: "1rem" }}
+          style={{ display: 'flex', flexDirection: 'column', gap: '0.7rem', marginBottom: '1.5rem' }}
         >
-          {questions.map((q) => (
-            <div key={q.field}>
-              <label style={{ fontWeight: "bold", marginBottom: 4, display: "block" }}>
+          {questions.map(q => (
+            <div
+              key={q.field}
+              style={{
+                background: "#f7f8fa",
+                borderRadius: "10px",
+                padding: "12px 14px",
+                boxShadow: "0 1px 2px rgba(0,0,0,0.03)",
+                border: "1px solid #ececec",
+                display: "flex",
+                flexDirection: "column",
+                gap: "0.3rem"
+              }}
+            >
+              <label style={{ fontWeight: 600, fontSize: "1.04rem", color: "#222" }}>
                 {q.title}
               </label>
               <input
                 type="text"
                 value={editForm[q.field] || ""}
-                onChange={(e) => setEditForm({ ...editForm, [q.field]: e.target.value })}
+                onChange={e => setEditForm({ ...editForm, [q.field]: e.target.value })}
                 placeholder="Введите значение..."
                 style={{
                   width: "100%",
@@ -248,11 +277,12 @@ export default function App() {
                   fontSize: "1rem",
                   borderRadius: "6px",
                   border: "1px solid #ccc",
+                  background: "#fff"
                 }}
               />
             </div>
           ))}
-          <div className="buttons" style={{ marginTop: "1.5rem", display: "flex", gap: "1rem" }}>
+          <div className="buttons" style={{ marginTop: "1.5rem" }}>
             <button type="button" className="cancel" onClick={() => setEditing(false)}>
               Назад
             </button>
@@ -265,7 +295,53 @@ export default function App() {
     </div>
   );
 }
-
+  if (viewing && existingProfile && existingProfile.name) {
+  return (
+    <div className="app">
+      <div className="card scrollable-card">
+        <div className="logo" style={{ marginTop: "0.5rem", marginBottom: "0.7rem" }}>
+          <img src="/vite.svg" alt="logo" style={{ width: 36, height: 36 }} />
+        </div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "1.7rem" }}>
+          <div className="progress-bar" style={{ flex: 1, maxWidth: 220, margin: "0 auto" }}>
+            <div className="progress" style={{ width: `100%` }} />
+          </div>
+        </div>
+        <h2 style={{ marginBottom: '1rem', textAlign: "center" }}>Твоя анкета</h2>
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '1rem',
+          marginBottom: '1.5rem'
+        }}>
+          {questions.map(q => (
+            <div className="profile-block" key={q.field}>
+              <div style={{
+                fontWeight: 700,
+                fontSize: "1.08rem",
+                color: "#222",
+                marginBottom: 2
+              }}>
+                {q.title}
+              </div>
+              <div style={{
+                color: '#666',
+                fontSize: '1.01rem',
+                lineHeight: 1.5,
+                wordBreak: "break-word"
+              }}>
+                {existingProfile[q.field] || <span style={{ color: '#bbb' }}>—</span>}
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="buttons" style={{ marginTop: '1.5rem' }}>
+          <button className="cancel" onClick={() => setViewing(false)}>Назад</button>
+          <button className="next" onClick={handleEditProfile}>Изменить анкету</button>
+        </div>
+      </div>
+    </div>
+  );
 }
   return (
     <div className="app">
@@ -304,8 +380,8 @@ export default function App() {
           <button className="cancel" onClick={handleCancel}>
             Отменить
           </button>
-          <button className="next" onClick={handleNext}>
-            Далее
+          <button className="next" onClick={handleNext} disabled={!form[field] || !form[field].trim()}>
+            {step === questions.length - 1 ? "Сохранить" : "Далее"}
           </button>
         </div>
       </div>

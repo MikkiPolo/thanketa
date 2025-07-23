@@ -11,22 +11,21 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-body {
+html, body {
   margin: 0;
-  min-width: 320px;
-  min-height: 100vh;
+  padding: 0;
   background: #FAFAFA;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
+  height: 100vh;
 }
 
 .app {
-  min-height: 100vh;
+  height: 100vh;
   width: 100vw;
+  overflow: hidden;
   display: flex;
-  align-items: flex-end;
   justify-content: center;
+  align-items: flex-start;
+  position: relative;
 }
 
 .card {
@@ -34,18 +33,17 @@ body {
   border-radius: 2.2rem;
   box-shadow: 0 8px 32px 0 rgba(33,37,71,0.10);
   min-width: 360px;
-  max-width: 460px;
-  min-height: 480px;
   max-width: 420px;
   width: 100%;
-  min-height: 540px;
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
   padding: 2.2rem 1.2rem 1.2rem 1.2rem;
   position: relative;
   transition: box-shadow 0.2s, background 0.3s, transform 0.18s;
   animation: fadeInCard 0.45s cubic-bezier(.4,0,.2,1);
+  padding-bottom: calc(1.2rem + env(safe-area-inset-bottom, 0px));
+  overflow-y: auto;
+  height: 100vh;
 }
 
 .logo {
@@ -108,16 +106,44 @@ h2 {
   border-radius: 1.2rem;
   padding: 0.9rem 1.1rem;
   min-height: 2.5em;
-  display: flex;
+  display: block;
   align-items: flex-start;
+  width: 100%;          
+  box-sizing: border-box;
+  white-space: normal;
+  word-wrap: break-word;
+  max-width: 100%;
+  line-height: 1.5;
+  white-space: pre-line;
 }
-
+.hint {
+  background: #f9fafc;
+  box-shadow: 0 4px 16px 0 rgba(33,37,71,0.10);
+  border-left: 6px solid;
+  border-image: linear-gradient(180deg, #229ED9 0%, #F7BFA0 100%) 1;
+  margin-bottom: 1.5rem;
+}
+.hint a {
+  font-size: 0.98em;
+  color: #229ED9;
+}
+.hint p {
+  margin: 0 0 0.5rem 0;
+  line-height: 1.4;
+}
 .input-wrap {
   width: 100%;
   display: flex;
   justify-content: center;
   margin-bottom: 2.1rem;
 }
+.input-wrap input[type="text"] {
+  background: #f9fafc;
+  box-shadow: 0 4px 16px 0 rgba(33,37,71,0.10);
+  border-left: 6px solid;
+  border-image: linear-gradient(180deg, #229ED9 0%, #F7BFA0 100%) 1;
+}
+
 input[type="text"] {
   width: 100%;
   max-width: 100%;
@@ -213,14 +239,46 @@ input[type="text"]:focus {
 
 @media (max-width: 600px) {
   .card {
-    min-height: 100dvh;
-    max-height: 100dvh;
+    /* убери min-height и max-height! */
     border-radius: 0;
     padding: 1.2rem 0.5rem 1.2rem 0.5rem;
     box-shadow: 0 -2px 24px 0 rgba(33,37,71,0.10);
-    justify-content: flex-end;
+    overflow-y: auto;
+    padding-bottom: calc(1.2rem + env(safe-area-inset-bottom, 0px));
+    min-height: 0 !important;
+    height: 100vh !important;
+    max-height: none !important;
   }
   .app {
-    align-items: flex-end;
+    align-items: auto;
+    min-height: 0 !important;
+    height: auto !important;
+    max-height: none !important;
   }
+}
+.profile-block {
+  background: #f9fafc;
+  border-radius: 18px 0 18px 18px;
+  padding: 18px 16px;
+  box-shadow: 0 4px 16px 0 rgba(33,37,71,0.10);
+  border-left: 6px solid;
+  border-image: linear-gradient(180deg, #229ED9 0%, #F7BFA0 100%) 1;
+  margin-bottom: 1rem;
+  transition: box-shadow 0.18s, background 0.18s;
+}
+.profile-block:active {
+  background: #f1f3f7;
+  box-shadow: 0 2px 8px 0 rgba(33,37,71,0.07);
+}
+button.next:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  filter: grayscale(0.3);
+}
+.scrollable-card {
+  overflow-y: auto;
+  max-height: 100vh;
+  -webkit-overflow-scrolling: touch;
+  padding-top: 1.5rem;
+  padding-bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));
 }
