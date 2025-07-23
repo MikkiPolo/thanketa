@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import "./App.css";
+import WardrobePage from './WardrobePage';
 
 const questions = [
   { title: "Как тебя зовут?", field: "name" },
@@ -87,6 +88,9 @@ export default function App() {
   const [viewing, setViewing] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState({});
+  const [viewingWardrobe, setViewingWardrobe] = useState(false);
+
+
 
   const handleEditProfile = () => {
   setEditForm(existingProfile || {});
@@ -187,42 +191,65 @@ export default function App() {
 
   if (loading) return <div className="app">Загрузка...</div>;
 
+  if (viewingWardrobe && existingProfile?.telegram_id) {
+  return (
+    <WardrobePage
+      telegramId={existingProfile.telegram_id}
+      access={existingProfile.access}
+      onBack={() => {
+        setViewingWardrobe(false);
+      }}
+    />
+  );
+}
+
   if (!started && !viewing) {
   return (
     <div className="app">
       <div className="card" style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center" }}>
         <div className="logo" style={{ marginTop: "0.5rem", marginBottom: "0.7rem" }}>
-          <img src="/vite.svg" alt="logo" style={{ width: 36, height: 36 }} />
+          <img src="/vite.svg" alt="logo" className="logo-img" />
         </div>
+
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "1.7rem" }}>
           <div className="progress-bar" style={{ flex: 1, maxWidth: 220, margin: "0 auto" }}>
             <div className="progress" style={{ width: `0%` }} />
           </div>
         </div>
-        <div style={{ fontSize: "1.4rem", marginBottom: "1rem", textAlign: "center" }}>
+
+        <div style={{ fontSize: "1.4rem", marginBottom: "1rem", textAlign: "center", color: "#7E4A57" }}>
           {existingProfile?.name ? `Привет, ${existingProfile.name}!` : "Добро пожаловать!"}
         </div>
-        <div style={{ 
-          display: "flex",
-          flexDirection: "column",
-          gap: "1rem", 
-          justifyContent: "center",
-          alignItems: "stretch",
-          width: "100%",
-          maxWidth: 320,
-          margin: "0 auto"
-          }}>
-        <div className="buttons" style={{ marginTop: "1.5rem" }}>
-          {!existingProfile || !existingProfile.name && (
-            <button onClick={handleStart} className="next">
-              Заполнить анкету
-            </button>
-          )}
-          {existingProfile?.name && (
-            <button onClick={handleViewProfile} className="next">
-              Просмотреть анкету
-            </button>
-          )}
+
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "1rem",
+            justifyContent: "center",
+            alignItems: "stretch",
+            width: "100%",
+            maxWidth: 320,
+            margin: "0 auto",
+          }}
+        >
+          <div className="buttons" style={{ marginTop: "1.5rem" }}>
+            {!existingProfile || !existingProfile.name ? (
+              <button onClick={handleStart} className="next">
+                Заполнить анкету
+              </button>
+            ) : (
+              <>
+                <button onClick={handleViewProfile} className="next">
+                  Профиль
+                </button>
+                {existingProfile.access === "full" && (
+                  <button onClick={() => setViewingWardrobe(true)} className="next">
+                    Гардероб
+                  </button>
+                )}
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -234,14 +261,14 @@ export default function App() {
     <div className="app">
       <div className="card">
         <div className="logo" style={{ marginTop: "0.5rem", marginBottom: "0.7rem" }}>
-          <img src="/vite.svg" alt="logo" style={{ width: 36, height: 36 }} />
+          <img src="/vite.svg" alt="logo" className="logo-img" />
         </div>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "1.7rem" }}>
           <div className="progress-bar" style={{ flex: 1, maxWidth: 220, margin: "0 auto" }}>
             <div className="progress" style={{ width: `100%` }} />
           </div>
         </div>
-        <h2 style={{ marginBottom: '1rem', textAlign: "center" }}>Редактировать анкету</h2>
+        <h2 style={{ marginBottom: '1rem', textAlign: "center" }}>Редактировать профиль</h2>
         <form
           onSubmit={e => {
             e.preventDefault();
@@ -300,14 +327,14 @@ export default function App() {
     <div className="app">
       <div className="card scrollable-card">
         <div className="logo" style={{ marginTop: "0.5rem", marginBottom: "0.7rem" }}>
-          <img src="/vite.svg" alt="logo" style={{ width: 36, height: 36 }} />
+          <img src="/vite.svg" alt="logo" className="logo-img" />
         </div>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "1.7rem" }}>
           <div className="progress-bar" style={{ flex: 1, maxWidth: 220, margin: "0 auto" }}>
             <div className="progress" style={{ width: `100%` }} />
           </div>
         </div>
-        <h2 style={{ marginBottom: '1rem', textAlign: "center" }}>Твоя анкета</h2>
+        <h2 style={{ marginBottom: '1rem', textAlign: "center", color: "#7E4A57" }}>Твой профиль</h2>
         <div style={{
           display: 'flex',
           flexDirection: 'column',
@@ -319,17 +346,12 @@ export default function App() {
               <div style={{
                 fontWeight: 700,
                 fontSize: "1.08rem",
-                color: "#222",
+                color: "#FFFFFF",
                 marginBottom: 2
               }}>
                 {q.title}
               </div>
-              <div style={{
-                color: '#666',
-                fontSize: '1.01rem',
-                lineHeight: 1.5,
-                wordBreak: "break-word"
-              }}>
+              <div className="answer-from-db">
                 {existingProfile[q.field] || <span style={{ color: '#bbb' }}>—</span>}
               </div>
             </div>
@@ -337,7 +359,7 @@ export default function App() {
         </div>
         <div className="buttons" style={{ marginTop: '1.5rem' }}>
           <button className="cancel" onClick={() => setViewing(false)}>Назад</button>
-          <button className="next" onClick={handleEditProfile}>Изменить анкету</button>
+          <button className="next" onClick={handleEditProfile}>Изменить</button>
         </div>
       </div>
     </div>
@@ -347,7 +369,7 @@ export default function App() {
     <div className="app">
       <div className={`card ${animate ? "fade-in" : "fade-out"}`}>
         <div className="logo" style={{ marginTop: "0.5rem", marginBottom: "0.7rem" }}>
-          <img src="/vite.svg" alt="logo" style={{ width: 36, height: 36 }} />
+          <img src="/vite.svg" alt="logo" className="logo-img" />
         </div>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "1.7rem" }}>
           <div className="progress-bar" style={{ flex: 1, maxWidth: 220, margin: "0 auto" }}>
