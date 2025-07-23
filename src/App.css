@@ -1,0 +1,226 @@
+:root {
+  font-family: 'Inter', 'SF Pro Display', system-ui, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color-scheme: light;
+  color: #222;
+  background-color: #FAFAFA;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background: #FAFAFA;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.app {
+  min-height: 100vh;
+  width: 100vw;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.card {
+  background: #fff;
+  border-radius: 2.2rem;
+  box-shadow: 0 8px 32px 0 rgba(33,37,71,0.10);
+  min-width: 360px;
+  max-width: 460px;
+  min-height: 480px;
+  max-width: 420px;
+  width: 100%;
+  min-height: 540px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 2.2rem 1.2rem 1.2rem 1.2rem;
+  position: relative;
+  transition: box-shadow 0.2s, background 0.3s, transform 0.18s;
+  animation: fadeInCard 0.45s cubic-bezier(.4,0,.2,1);
+}
+
+.logo {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 1.1rem;
+}
+.logo img {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 12px rgba(33,147,176,0.10);
+}
+
+.progress-bar {
+  height: 5px;
+  background: #F0F0F0;
+  border-radius: 5px;
+  margin-bottom: 1.7rem;
+  overflow: hidden;
+  position: relative;
+}
+.progress {
+  height: 100%;
+  background: linear-gradient(90deg, #229ED9 0%, #F7BFA0 100%);
+  border-radius: 5px;
+  transition: width 0.5s cubic-bezier(.4,0,.2,1);
+}
+
+h2 {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #222;
+  margin-bottom: 1.1rem;
+  letter-spacing: 0.01em;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.question {
+  font-size: 1.22rem;
+  font-weight: 700;
+  margin-bottom: 1.1rem;
+  color: #222;
+  letter-spacing: 0.01em;
+  text-align: left;
+  min-height: 2.5em;
+  display: flex;
+  align-items: flex-end;
+}
+.hint {
+  font-size: 1.04rem;
+  color: #999;
+  margin-bottom: 1.5rem;
+  background: #F6F6FA;
+  border-radius: 1.2rem;
+  padding: 0.9rem 1.1rem;
+  min-height: 2.5em;
+  display: flex;
+  align-items: flex-start;
+}
+
+.input-wrap {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  margin-bottom: 2.1rem;
+}
+input[type="text"] {
+  width: 100%;
+  max-width: 100%;
+  padding: 1.1rem 1.5rem;
+  border-radius: 1.5rem;
+  border: none;
+  background: #F6F6FA;
+  box-shadow: 0 1px 6px rgba(33,37,71,0.04);
+  font-size: 1.13rem;
+  outline: none;
+  transition: box-shadow 0.2s, background 0.2s;
+  color: #222;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+input[type="text"]:focus {
+  box-shadow: 0 2px 12px rgba(33,37,71,0.10);
+  background: #fff;
+}
+
+.buttons {
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-top: auto;
+  margin-bottom: 0.2rem;
+}
+.buttons button {
+  flex: 1 1 0;
+  padding: 1.1rem 0;
+  border-radius: 1.5rem;
+  border: 1.5px solid #F0F0F0;
+  font-weight: 600;
+  font-size: 1.09rem;
+  cursor: pointer;
+  background: #fff;
+  color: #222;
+  box-shadow: 0 1px 6px rgba(33,37,71,0.04);
+  transition: border-color 0.18s, background 0.18s, color 0.18s, box-shadow 0.13s, transform 0.13s;
+  outline: none;
+  letter-spacing: 0.01em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 0;
+}
+.buttons .back {
+  background: #F6F6FA;
+  color: #229ED9;
+  border: 1.5px solid #E0F0FC;
+}
+.buttons .back:hover {
+  background: #E0F0FC;
+  color: #1976A5;
+}
+.buttons .cancel {
+  background: #fff;
+  color: #E53935;
+  border: 1.5px solid #FFD6D6;
+}
+.buttons .cancel:hover {
+  background: #FFEAEA;
+  color: #B71C1C;
+}
+.buttons .next {
+  background: linear-gradient(90deg, #229ED9 0%, #F7BFA0 100%);
+  color: #fff;
+  border: none;
+  box-shadow: 0 2px 8px rgba(33,147,176,0.07);
+}
+.buttons .next:hover {
+  background: linear-gradient(90deg, #F7BFA0 0%, #229ED9 100%);
+  color: #fff;
+  transform: translateY(-2px) scale(1.03);
+}
+
+.fade-in {
+  animation: fadeInCard 0.45s cubic-bezier(.4,0,.2,1);
+}
+.fade-out {
+  animation: fadeOutCard 0.18s cubic-bezier(.4,0,.2,1);
+}
+@keyframes fadeInCard {
+  from { opacity: 0; transform: translateY(24px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes fadeOutCard {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to { opacity: 0; transform: translateY(24px) scale(0.98); }
+}
+
+@media (max-width: 600px) {
+  .card {
+    min-height: 100dvh;
+    max-height: 100dvh;
+    border-radius: 0;
+    padding: 1.2rem 0.5rem 1.2rem 0.5rem;
+    box-shadow: 0 -2px 24px 0 rgba(33,37,71,0.10);
+    justify-content: flex-end;
+  }
+  .app {
+    align-items: flex-end;
+  }
+}
