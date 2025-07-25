@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef} from "react";
 import "./App.css";
 import WardrobePage from './WardrobePage';
+
 
 const questions = [
   { title: "Как тебя зовут?", field: "name" },
@@ -89,6 +90,7 @@ export default function App() {
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState({});
   const [viewingWardrobe, setViewingWardrobe] = useState(false);
+  const wardrobeRef = useRef(null);
 
 
 
@@ -133,6 +135,14 @@ export default function App() {
       setLoading(false);
     }
   }, []);
+  
+  useEffect(() => {
+  if (viewingWardrobe) {
+    window.scrollTo({ top: 0, behavior: "auto" });
+  }
+}, [viewingWardrobe]);
+
+
 
   const handleChange = (e) => {
     setForm({ ...form, [questions[step].field]: e.target.value });
@@ -196,13 +206,16 @@ export default function App() {
 
   if (viewingWardrobe && existingProfile?.telegram_id) {
   return (
-    <WardrobePage
-      telegramId={existingProfile.telegram_id}
-      access={existingProfile.access}
-      onBack={() => {
-        setViewingWardrobe(false);
-      }}
-    />
+    <div className="app">
+      <WardrobePage
+        telegramId={existingProfile.telegram_id}
+        access={existingProfile.access}
+        scrollRef={wardrobeRef}
+        onBack={() => {
+          setViewingWardrobe(false);
+        }}
+      />
+    </div>
   );
 }
 
