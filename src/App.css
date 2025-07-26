@@ -266,39 +266,41 @@ input[type="text"]:focus {
 
 @media (max-width: 600px) {
   .card {
-  padding-top: calc(1.5rem + env(safe-area-inset-top, 0px));
-  border-radius: 1.5rem;
-  padding: 1.5rem;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-  padding-bottom: calc(1.2rem + env(safe-area-inset-bottom, 0px));
-  max-width: 420px;
-  width: 80%;
-  margin: 4vh auto;
-  min-height: 100%;
-  
+    padding-top: calc(1.5rem + env(safe-area-inset-top, 0px));
+    border-radius: 1.5rem;
+    padding: 1.5rem;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    padding-bottom: calc(1.2rem + env(safe-area-inset-bottom, 0px));
+    max-width: 420px;
+    width: 80%;
+    margin: 4vh auto;
 
-  background: var(--main-gradient);
-  
-  backdrop-filter: blur(60px) saturate(180%);
-  -webkit-backdrop-filter: blur(60px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  overflow: hidden;
-}
+    background: var(--main-gradient);
+
+    backdrop-filter: blur(60px) saturate(180%);
+    -webkit-backdrop-filter: blur(60px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+
+    /* адаптация под мобильный WebView */
+    height: auto;
+    max-height: 100vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
   .app {
-  align-items: center;
-  min-height: 100%;
-  height: auto !important;
-  max-height: none !important;
-  background: var(--main-gradient) !important;
-  overflow-y: auto;
-  display: flex;
-  justify-content: center;
-}
+    align-items: center;
+    min-height: 100vh;
+    height: auto !important;
+    max-height: none !important;
+    background: var(--main-gradient) !important;
+    overflow-y: auto;
+    display: flex;
+    justify-content: center;
+  }
 
   .wardrobe-list {
     flex: 1;
