@@ -26,3 +26,4 @@ redis>=5.0.0
 
 # Дополнительные зависимости для rembg
 onnxruntime>=1.15.0 gunicorn==21.2.0
+gunicorn==21.2.0
