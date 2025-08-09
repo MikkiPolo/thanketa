@@ -3,7 +3,21 @@ from flask_cors import CORS
 try:
     from rembg import remove as _rembg_remove
     def remove_bg(image):
-        return _rembg_remove(image)
+        """Удаляет фон, возвращая PIL.Image в RGBA. В случае ошибки возвращает исходное изображение."""
+        try:
+            out = _rembg_remove(image)
+            # rembg.remove может вернуть bytes (PNG) — конвертируем в PIL.Image
+            if isinstance(out, (bytes, bytearray)):
+                buf = io.BytesIO(out)
+                img = Image.open(buf)
+                # Гарантируем прозрачный фон в RGBA
+                return img.convert('RGBA') if img.mode != 'RGBA' else img
+            # Или уже PIL.Image
+            if isinstance(out, Image.Image):
+                return out.convert('RGBA') if out.mode != 'RGBA' else out
+            return image
+        except Exception:
+            return image
     REMBG_AVAILABLE = True
 except Exception as _e:
     # rembg/onnxruntime not available in slim image; fall back to no-op
