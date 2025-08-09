@@ -37,6 +37,9 @@ services:
     build:
       context: .
       dockerfile: frontend.Dockerfile
+      args:
+        VITE_SUPABASE_URL: ${VITE_SUPABASE_URL}
+        VITE_SUPABASE_ANON_KEY: ${VITE_SUPABASE_ANON_KEY}
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.front.rule=Host(`linapolo.store`)"
