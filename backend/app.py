@@ -22,10 +22,8 @@ import time
 from datetime import datetime
 from dotenv import load_dotenv
 from config import Config
-from huggingface_generator import CapsuleGeneratorFactory
 from ai_wardrobe_analyzer import AIWardrobeAnalyzer, AIAnalyzerFactory, UserFeedback, AnalysisResult
 import json
-import ollama
 import hashlib
 from typing import List, Dict, Any
 import logging
@@ -86,8 +84,10 @@ try:
         capsule_generator = None
     else:
         generator_config = Config.get_generator_config()
+        # Ленивая загрузка тяжёлых зависимостей только при необходимости
+        from huggingface_generator import CapsuleGeneratorFactory  # noqa: WPS433
         capsule_generator = CapsuleGeneratorFactory.create_generator(
-            Config.AI_GENERATOR_TYPE, 
+            Config.AI_GENERATOR_TYPE,
             **generator_config
         )
         print(f"✅ Генератор капсул инициализирован: {Config.AI_GENERATOR_TYPE}")

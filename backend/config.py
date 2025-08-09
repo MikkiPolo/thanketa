@@ -7,7 +7,7 @@ class Config:
     """Конфигурация приложения"""
     
     # Настройки ИИ
-    AI_GENERATOR_TYPE = os.getenv('AI_GENERATOR_TYPE', 'ollama')  # ollama, huggingface, semantic, gpt
+    AI_GENERATOR_TYPE = os.getenv('AI_GENERATOR_TYPE', 'gpt')  # gpt по умолчанию
     AI_MODEL_NAME = os.getenv('AI_MODEL_NAME', 'phi3:mini')  # Быстрая модель для высокой нагрузки
     AI_TEMPERATURE = float(os.getenv('AI_TEMPERATURE', '0.7'))
     AI_MAX_TOKENS = int(os.getenv('AI_MAX_TOKENS', '1500'))  # Уменьшили для скорости
