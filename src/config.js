@@ -1,5 +1,10 @@
 // Конфигурация для работы с backend
-export const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5001';
+// В проде по умолчанию используем текущий домен + /api, чтобы избежать localhost
+const defaultBackendUrl = (typeof window !== 'undefined' && import.meta.env.PROD)
+  ? `${window.location.origin}/api`
+  : 'http://localhost:5001';
+
+export const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || defaultBackendUrl;
 
 // Добавляем версию для обхода кэша в Telegram Mini App
 export const BACKEND_URL_WITH_VERSION = BACKEND_URL + '?v=' + Date.now();
