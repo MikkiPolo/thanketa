@@ -1,0 +1,28 @@
+flask>=2.3.0
+flask-cors>=4.0.0
+rembg>=2.0.60
+Pillow>=10.0.0
+requests>=2.31.0
+python-dotenv>=1.0.0
+
+# Локальные ИИ модели
+ollama>=0.1.7
+transformers>=4.35.0
+torch>=2.1.0
+sentence-transformers>=2.2.2
+scikit-learn>=1.3.0
+numpy>=1.24.0
+
+# Альтернативы
+openai>=1.3.0
+anthropic>=0.7.0
+
+# Дополнительные зависимости
+accelerate>=0.24.0
+bitsandbytes>=0.41.0
+
+# Кэширование и метрики
+redis>=5.0.0
+
+# Дополнительные зависимости для rembg
+onnxruntime>=1.15.0 
