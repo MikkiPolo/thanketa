@@ -40,6 +40,7 @@ services:
       args:
         VITE_SUPABASE_URL: ${VITE_SUPABASE_URL}
         VITE_SUPABASE_ANON_KEY: ${VITE_SUPABASE_ANON_KEY}
+        VITE_BACKEND_URL: ${VITE_BACKEND_URL:-https://linapolo.store/api}
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.front.rule=Host(`linapolo.store`)"
