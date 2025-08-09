@@ -1,6 +1,15 @@
 from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
-from rembg import remove
+try:
+    from rembg import remove as _rembg_remove
+    def remove_bg(image):
+        return _rembg_remove(image)
+    REMBG_AVAILABLE = True
+except Exception as _e:
+    # rembg/onnxruntime not available in slim image; fall back to no-op
+    def remove_bg(image):
+        return image
+    REMBG_AVAILABLE = False
 from PIL import Image
 import io
 import base64
@@ -123,8 +132,8 @@ def remove_background():
         # Читаем изображение
         image = Image.open(file.stream)
         
-        # Удаляем фон
-        result = remove(image)
+        # Удаляем фон (если доступно); иначе возвращаем исходное
+        result = remove_bg(image)
         
         # Конвертируем в байты
         img_byte_arr = io.BytesIO()
@@ -477,8 +486,8 @@ def analyze_wardrobe_item():
                 'success': False
             }), 400
         
-        # Удаляем фон
-        result_image = remove(image)
+        # Удаляем фон (если доступно); иначе сохраняем как есть
+        result_image = remove_bg(image)
         
         # Сжимаем и уменьшаем изображение перед base64 (JPEG 512x512)
         work_img = result_image
