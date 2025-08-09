@@ -1,40 +1,85 @@
-import React, { useEffect, useState, useRef } from 'react';
-import axios from 'axios';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
+import { Camera, Plus } from 'lucide-react';
+import { wardrobeService } from './supabase';
+import WardrobeStats from './WardrobeStats';
+import AddWardrobeItem from './AddWardrobeItem';
+import WardrobeItemDetail from './WardrobeItemDetail';
+import LoadingSpinner from './LoadingSpinner';
+import NotificationModal from './NotificationModal';
 
 
 
-const WardrobePage = ({ telegramId, access, onBack }) => {
+const WardrobePage = ({ telegramId, access, onBack, profile }) => {
   const [wardrobe, setWardrobe] = useState([]);
+  const [filteredWardrobe, setFilteredWardrobe] = useState([]);
   const [editingRow, setEditingRow] = useState(null);
   const [editedData, setEditedData] = useState({});
+  const [loading, setLoading] = useState(false);
+  const [showStats, setShowStats] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [selectedItem, setSelectedItem] = useState(null);
+  const [notification, setNotification] = useState({ isVisible: false, type: 'success', title: '', message: '' });
 
   const cardRef = useRef(null);
-
   const hasFetched = useRef(false);
 
-  const fetchWardrobe = () => {
+  const fetchWardrobe = useCallback(async () => {
+    // Защита от повторных запросов
+    if (loading) return;
+    
+    setLoading(true);
     setWardrobe([]);
-    axios.post('https://lipolo.ru/webhook/getwardrobe', { telegram_id: telegramId })
-      .then(res => {
-        const cleaned = res.data.filter(item => item && item.id);
-        setWardrobe(cleaned);
-        setTimeout(() => {
-          if (cardRef.current) {
-            cardRef.current.scrollTop = 0;
-          }
-        }, 100);
-      })
-      .catch(err => console.error('Error fetching wardrobe:', err));
-  };
+    try {
+      console.log('Fetching wardrobe from Supabase...');
+      const data = await wardrobeService.getWardrobe(telegramId);
+      console.log('Wardrobe response:', data);
+      const cleaned = data.filter(item => item && item.id);
+      setWardrobe(cleaned);
+      setFilteredWardrobe(cleaned);
+      setTimeout(() => {
+        if (cardRef.current) {
+          cardRef.current.scrollTop = 0;
+        }
+      }, 100);
+    } catch (error) {
+      console.error('Error fetching wardrobe:', error);
+      setWardrobe([]);
+      setFilteredWardrobe([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [telegramId, loading]);
 
 // Удалён бесполезный useEffect со скроллом
 
 useEffect(() => {
-  if (!hasFetched.current && telegramId && access === 'full') {
+  console.log('WardrobePage useEffect:', { telegramId, access, hasFetched: hasFetched.current });
+  if (!hasFetched.current && telegramId && (access === 'full' || access === "full")) {
+    console.log('Access granted, fetching wardrobe...');
     hasFetched.current = true;
     fetchWardrobe();
+  } else {
+    console.log('Access check failed:', { 
+      hasFetched: hasFetched.current, 
+      telegramId: !!telegramId, 
+      access: access,
+      hasAccess: access === 'full' || access === "full"
+    });
   }
-}, [telegramId, access]);
+}, [telegramId, access, fetchWardrobe]); // Добавляем fetchWardrobe в зависимости
+
+// Слушаем событие для открытия модального окна добавления
+useEffect(() => {
+  const handleOpenAddModal = () => {
+    setShowAddModal(true);
+  };
+
+  window.addEventListener('openAddModal', handleOpenAddModal);
+
+  return () => {
+    window.removeEventListener('openAddModal', handleOpenAddModal);
+  };
+}, []);
 
 
   const handleEdit = (id, item) => {
@@ -48,12 +93,14 @@ useEffect(() => {
 
   const handleSave = async (row) => {
     try {
-      await axios.post('https://lipolo.ru/webhook/wardrobe_safe', {
+      await wardrobeService.updateItem(row.id, {
         ...editedData,
-        id: row.id,
         telegram_id: row.telegram_id,
       });
       setWardrobe(prev =>
+        prev.map(item => item.id === row.id ? { ...item, ...editedData } : item)
+      );
+      setFilteredWardrobe(prev =>
         prev.map(item => item.id === row.id ? { ...item, ...editedData } : item)
       );
       setEditingRow(null);
@@ -68,101 +115,199 @@ useEffect(() => {
   if (!confirmed) return;
 
   try {
-    const response = await axios.post('https://lipolo.ru/webhook/wardrobe_del', { id });
-    if (response.status === 200) {
-      fetchWardrobe();
-      if (editingRow === id) {
-        setEditingRow(null);
-        setEditedData({});
-      }
+    await wardrobeService.deleteItem(id);
+    fetchWardrobe();
+    if (editingRow === id) {
+      setEditingRow(null);
+      setEditedData({});
     }
   } catch (err) {
     console.error("Ошибка при удалении:", err);
   }
 };
 
- return (
-  <div className="app">
-    <div className="card">
-      <div className="wardrobe-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <h2 style={{ margin: 0 }}>Твой гардероб</h2>
-        <button className="back-btn" onClick={onBack}>← Назад</button>
-      </div>
-      <div className="wardrobe-list" ref={cardRef}>
-        {wardrobe.length === 0 ? (
-          <div style={{ textAlign: 'center', color: '#777', padding: '1rem' }}>
-            Гардероб пуст
+  const handleCategoryFilter = (category) => {
+    if (!category) {
+      setFilteredWardrobe(wardrobe);
+    } else {
+      const filtered = wardrobe.filter(item => item.category === category);
+      setFilteredWardrobe(filtered);
+    }
+  };
+
+  const handleImageUpload = async (images) => {
+    // Здесь можно добавить логику для сохранения изображений
+    console.log('Uploaded images:', images);
+    
+    // Пока что просто показываем уведомление
+    alert('Функция загрузки изображений в разработке');
+  };
+
+  const handleAddItem = () => {
+    // Ограничение для demo: максимум 20 вещей
+    if (access === 'demo' && wardrobe.length >= 20) {
+      showNotification('error', '', 'В демо-режиме можно добавить не более 20 вещей');
+      return;
+    }
+    setShowAddModal(true);
+  };
+
+  const showNotification = (type, title, message) => {
+    setNotification({ isVisible: true, type, title, message });
+    // Авто-скрытие через 2 секунды
+    window.clearTimeout(showNotification._t);
+    showNotification._t = window.setTimeout(() => {
+      setNotification({ isVisible: false, type: 'success', title: '', message: '' });
+    }, 2000);
+  };
+
+  const hideNotification = () => {
+    setNotification({ isVisible: false, type: 'success', title: '', message: '' });
+  };
+
+  const handleItemAdded = (newItem) => {
+    setWardrobe(prev => [newItem, ...prev]);
+    setFilteredWardrobe(prev => [newItem, ...prev]);
+    showNotification('success', '', 'Вещь успешно добавлена в гардероб!');
+  };
+
+  const handleCloseAddModal = () => {
+    setShowAddModal(false);
+  };
+
+  const handleItemClick = (item) => {
+    setSelectedItem(item);
+  };
+
+  const handleItemDetailBack = () => {
+    setSelectedItem(null);
+  };
+
+  const handleItemUpdated = (updatedItem) => {
+    setWardrobe(prev => prev.map(item => item.id === updatedItem.id ? updatedItem : item));
+    setFilteredWardrobe(prev => prev.map(item => item.id === updatedItem.id ? updatedItem : item));
+    setSelectedItem(updatedItem);
+  };
+
+  const handleItemDeleted = (itemId) => {
+    setWardrobe(prev => prev.filter(item => item.id !== itemId));
+    setFilteredWardrobe(prev => prev.filter(item => item.id !== itemId));
+    setSelectedItem(null);
+  };
+
+  // Если выбрана детальная страница, показываем только её
+  if (selectedItem) {
+    return (
+      <WardrobeItemDetail
+        item={selectedItem}
+        telegramId={telegramId}
+        onBack={handleItemDetailBack}
+        onItemUpdated={handleItemUpdated}
+        onItemDeleted={handleItemDeleted}
+      />
+    );
+  }
+
+  // Иначе показываем список гардероба
+  return (
+    <div className="app">
+      <div className="card" style={{ paddingTop: "calc(env(safe-area-inset-top) + 4rem)" }}>
+        <div className="wardrobe-header" style={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
+          <h2 style={{ margin: 0, color: 'var(--color-text-primary)', marginBottom: '1rem' }}>Гардероб</h2>
+        </div>
+        <div className="wardrobe-buttons">
+          <button 
+            className="btn-primary wardrobe-add-btn" 
+            onClick={handleAddItem}
+            aria-label="Добавить"
+          >
+            +
+          </button>
+          <button 
+            className="btn-secondary" 
+            onClick={() => setShowStats(!showStats)}
+          >
+            Статистика
+          </button>
+          <button className="btn-secondary" onClick={onBack}>Назад</button>
+        </div>
+
+        {showStats && (
+          <WardrobeStats 
+            wardrobe={wardrobe}
+            profile={profile}
+          />
+        )}
+
+        {loading ? (
+          <div style={{ textAlign: 'center', padding: '2rem' }}>
+            <LoadingSpinner size="large" color="var(--color-accent)" />
+            <p style={{ marginTop: '1rem', color: 'var(--color-text-primary)' }}>
+              Загрузка гардероба...
+            </p>
           </div>
         ) : (
-          wardrobe
-            .filter(item => item && item.id && item.category)
-            .map(item => (
-              <div key={item.id} className="wardrobe-item-block">
-                {editingRow === item.id ? (
-                  <>
-                    <div>
-                      <strong>Категория:</strong>{' '}
-                      <input
-                        type="text"
-                        value={editedData.category || ''}
-                        onChange={e => handleChange('category', e.target.value)}
-                      />
-                    </div>
-                    <div>
-                      <strong>Сезонность:</strong>{' '}
-                      <input
-                        type="text"
-                        value={editedData.season || ''}
-                        onChange={e => handleChange('season', e.target.value)}
-                      />
-                    </div>
-                    <div>
-                      <strong>Описание:</strong>{' '}
-                      <input
-                        type="text"
-                        value={editedData.description || ''}
-                        onChange={e => handleChange('description', e.target.value)}
-                      />
-                    </div>
-                    <button
-                      className="wardrobe-save-btn"
-                      disabled={
-                        !editedData.category ||
-                        !editedData.season ||
-                        !editedData.description
-                      }
-                      onClick={() => handleSave(item)}
-                    >
-                      Сохранить
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <div><strong>Категория:</strong> {item.category}</div>
-                    <div><strong>Сезонность:</strong> {item.season}</div>
-                    <div><strong>Описание:</strong> {item.description}</div>
-                    <div className="wardrobe-buttons">
-                      <button
-                        className="wardrobe-edit-btn"
-                        onClick={() => handleEdit(item.id, item)}
-                      >
-                        Изменить
-                      </button>
-                      <button
-                        className="wardrobe-delete-btn"
-                        onClick={() => handleDelete(item.id)}
-                      >
-                        Удалить
-                      </button>
-                    </div>
-                  </>
-                )}
+          <div className="wardrobe-grid" ref={cardRef}>
+            {filteredWardrobe.length === 0 ? (
+              <div style={{ textAlign: 'center', color: 'var(--input-text)', padding: '1rem' }}>
+                {wardrobe.length === 0 ? 'Гардероб пуст' : 'Ничего не найдено'}
               </div>
-            ))
+            ) : (
+              filteredWardrobe
+                .filter(item => item && item.id && item.category)
+                .map(item => (
+                  <div 
+                    key={item.id} 
+                    className="wardrobe-grid-item"
+                    onClick={() => handleItemClick(item)}
+                  >
+                    <div className="wardrobe-item-icon">
+                      {item.image_id ? (
+                        <img 
+                          src={wardrobeService.getImageUrl(telegramId, item.image_id)}
+                          alt={item.description}
+                          onError={(e) => {
+                            if (e.target.src.includes('.png')) {
+                              const jpgUrl = e.target.src.replace('.png', '.jpg');
+                              e.target.src = jpgUrl;
+                            } else {
+                              e.target.style.display = 'none';
+                            }
+                          }}
+                        />
+                      ) : (
+                        <div className="wardrobe-item-placeholder" aria-label="no image">
+                          <Camera size={20} />
+                        </div>
+                      )}
+                    </div>
+                    <div className="wardrobe-item-category">
+                      {item.category}
+                    </div>
+                  </div>
+                ))
+            )}
+          </div>
         )}
+
+        {showAddModal && (
+          <AddWardrobeItem
+            telegramId={telegramId}
+            onItemAdded={handleItemAdded}
+            onClose={handleCloseAddModal}
+          />
+        )}
+
+        {/* Уведомления */}
+        <NotificationModal
+          isVisible={notification.isVisible}
+          type={notification.type}
+          title={notification.title}
+          message={notification.message}
+          onClose={hideNotification}
+        />
       </div>
     </div>
-  </div>
-);
+  );
 }
 export default WardrobePage;

@@ -1,0 +1,21 @@
+{
+  "name": "Гардероб Стилиста",
+  "short_name": "Гардероб",
+  "description": "Приложение для управления гардеробом и стилем",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#EED4D9",
+  "theme_color": "#7E4A57",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/vite.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "categories": ["lifestyle", "fashion", "productivity"],
+  "lang": "ru",
+  "dir": "ltr"
+} 
