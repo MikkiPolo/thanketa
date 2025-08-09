@@ -1,22 +1,45 @@
 from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 try:
-    from rembg import remove as _rembg_remove
+    # Используем явную сессию и тюним маттинг для более качественной сегментации
+    from rembg.bg import remove as _rembg_remove, new_session as _rembg_new_session
+    _REMBG_SESSION = None
+
+    def _ensure_rembg_session():
+        global _REMBG_SESSION
+        if _REMBG_SESSION is None:
+            try:
+                _REMBG_SESSION = _rembg_new_session(model_name='u2net')
+                print('✅ rembg session initialized (u2net)')
+            except Exception as _se:
+                print(f'❌ rembg session init failed: {_se}')
+                _REMBG_SESSION = None
+
     def remove_bg(image):
-        """Удаляет фон, возвращая PIL.Image в RGBA. В случае ошибки возвращает исходное изображение."""
+        """Удаляет фон, возвращая PIL.Image RGBA. В случае ошибки возвращает исходное изображение."""
         try:
-            out = _rembg_remove(image)
+            _ensure_rembg_session()
+            kwargs = {}
+            if _REMBG_SESSION is not None:
+                kwargs.update({
+                    'session': _REMBG_SESSION,
+                    'alpha_matting': True,
+                    'alpha_matting_foreground_threshold': 240,
+                    'alpha_matting_background_threshold': 10,
+                    'alpha_matting_erode_size': 10,
+                    'post_process_mask': True,
+                })
+            out = _rembg_remove(image, **kwargs)
             # rembg.remove может вернуть bytes (PNG) — конвертируем в PIL.Image
             if isinstance(out, (bytes, bytearray)):
                 buf = io.BytesIO(out)
                 img = Image.open(buf)
-                # Гарантируем прозрачный фон в RGBA
                 return img.convert('RGBA') if img.mode != 'RGBA' else img
-            # Или уже PIL.Image
             if isinstance(out, Image.Image):
                 return out.convert('RGBA') if out.mode != 'RGBA' else out
             return image
-        except Exception:
+        except Exception as _re:
+            print(f'⚠️ rembg failed, returning original image: {_re}')
             return image
     REMBG_AVAILABLE = True
 except Exception as _e:
@@ -482,6 +505,12 @@ def analyze_wardrobe_item():
         # Создаем объект изображения из байтов
         try:
             image = Image.open(io.BytesIO(file_content))
+            # Поправка ориентации по EXIF
+            try:
+                from PIL import ImageOps
+                image = ImageOps.exif_transpose(image)
+            except Exception:
+                pass
             
             # Конвертируем HEIC в RGB если нужно
             if file.filename.lower().endswith(('.heic', '.heif')):
