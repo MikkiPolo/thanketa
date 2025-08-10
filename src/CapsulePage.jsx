@@ -276,7 +276,7 @@ const CapsulePage = ({ profile, onBack, initialCapsule = null, isFavoritesView =
           is_suitable: it.is_suitable
         }));
 
-        const response = await fetch(fullUrl, {
+      const response = await fetch(fullUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -287,8 +287,9 @@ const CapsulePage = ({ profile, onBack, initialCapsule = null, isFavoritesView =
             wardrobe: slimWardrobe,
             profile: profile,
             weather: weather,
-            // Явно обходим кэш при ручном обновлении
-            no_cache: options.forceRefresh === true
+            // Явно обходим кэш при ручном обновлении и принудительно включаем rule-engine
+            no_cache: options.forceRefresh === true,
+            engine: 'rule'
           }),
           signal: controller.signal
         });

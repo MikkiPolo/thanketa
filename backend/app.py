@@ -664,8 +664,10 @@ def generate_capsules():
 
         # Выбор движка: rule-based или GPT
         engine = str(data.get('engine') or data.get('rule_engine') or data.get('no_gpt') or '').lower()
-        if engine in ['1','true','yes','rule','rule_engine'] and rule_generate_capsules:
-            print('🧩 Используем rule-based генератор капсул (engine=rule)')
+        # По умолчанию используем RULE-движок; GPT только при явном engine=gpt
+        use_rule = engine != 'gpt'
+        if use_rule and rule_generate_capsules:
+            print('🧩 Используем rule-based генератор капсул (engine=rule, по умолчанию)')
             current_season = get_season_from_weather_simple(weather)
             temp_c = weather.get('main', {}).get('temp') or weather.get('temperature', 20)
             try:
