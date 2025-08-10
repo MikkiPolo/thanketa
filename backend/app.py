@@ -902,7 +902,7 @@ def generate_capsules_with_gpt(wardrobe, profile, weather):
 4. Фигура: учитывать рекомендации по силуэтам и зонам, которые нужно подчеркнуть/скрыть.
 5. В каждой капсуле обязательно есть обувь из категории "Обувь".
 6. Не использовать вещи из списка запрещённых ID.
-7. Капсул должно быть 6–10.
+ 7. Создай как можно больше уникальных капсул (минимум 12, без верхней границы). Не дублируй идентичные комбинации.
 8. Одну и ту же вещь нельзя использовать более чем в 2 капсулах в рамках одного ответа.
 
 **Правила JSON:**
@@ -1117,7 +1117,7 @@ def generate_capsules_with_gpt(wardrobe, profile, weather):
             category['examples'] = valid_capsules[:3]
         
         # 9. Возвращаем только результат GPT (без автодобавления fallback)
-        total_capsules = sum(len(cat['fullCapsules']) for cat in result['categories'])
+        total_capsules = sum(len(cat.get('fullCapsules', [])) for cat in result.get('categories', []))
         print(f"GPT сгенерировал {total_capsules} валидных капсул (fallback не добавляется)")
         return result
         
