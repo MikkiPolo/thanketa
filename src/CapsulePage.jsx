@@ -163,7 +163,7 @@ const CapsulePage = ({ profile, onBack, initialCapsule = null, isFavoritesView =
       
       // Генерируем капсулы на основе гардероба, анкеты и погоды
       console.log('📡 Отправляем запрос к бэкенду...');
-      const generatedCapsules = await generateCapsulesFromWardrobe(eligibleWardrobe, profile, weather);
+      const generatedCapsules = await generateCapsulesFromWardrobe(eligibleWardrobe, profile, weather, { forceRefresh: true });
       
       console.log('✅ Капсулы успешно сгенерированы!');
       setCapsules(generatedCapsules);
@@ -256,7 +256,7 @@ const CapsulePage = ({ profile, onBack, initialCapsule = null, isFavoritesView =
     });
   };
 
-  const generateCapsulesFromWardrobe = async (wardrobe, profile, weather) => {
+  const generateCapsulesFromWardrobe = async (wardrobe, profile, weather, options = {}) => {
     try {
       // Отправляем запрос на бэкенд для генерации капсул с таймаутом 90 секунд
       const controller = new AbortController();
@@ -286,7 +286,9 @@ const CapsulePage = ({ profile, onBack, initialCapsule = null, isFavoritesView =
           body: JSON.stringify({
             wardrobe: slimWardrobe,
             profile: profile,
-            weather: weather
+            weather: weather,
+            // Явно обходим кэш при ручном обновлении
+            no_cache: options.forceRefresh === true
           }),
           signal: controller.signal
         });

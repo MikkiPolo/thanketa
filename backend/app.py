@@ -903,6 +903,7 @@ def generate_capsules_with_gpt(wardrobe, profile, weather):
 5. В каждой капсуле обязательно есть обувь из категории "Обувь".
 6. Не использовать вещи из списка запрещённых ID.
 7. Капсул должно быть 6–10.
+8. Одну и ту же вещь нельзя использовать более чем в 2 капсулах в рамках одного ответа.
 
 **Правила JSON:**
 - Всегда строго валидный JSON без markdown.
@@ -1039,7 +1040,7 @@ def generate_capsules_with_gpt(wardrobe, profile, weather):
         accessory_ids = [str(it['id']) for it in filtered_wardrobe if translate_category(it.get('category','')) == 'accessories']
         shoe_ids = [str(it['id']) for it in filtered_wardrobe if translate_category(it.get('category','')) == 'shoes']
 
-        # Лимит на повторное использование одной вещи: не более 3 раз на 10 капсул
+                # Лимит на повторное использование одной вещи: не более 2 раз на подборку
         item_usage = {}
         excluded_ids_for_fix = compute_unsuitable_ids(profile, filtered_wardrobe)
         for category in result['categories']:
@@ -1080,7 +1081,7 @@ def generate_capsules_with_gpt(wardrobe, profile, weather):
                     too_much = False
                     for iid in valid_items:
                         item_usage[iid] = item_usage.get(iid, 0) + 1
-                        if item_usage[iid] > 5:
+                        if item_usage[iid] > 2:
                             too_much = True
                     if too_much:
                         print(f"Капсула {capsule.get('id', 'unknown')} отклонена: превышен лимит использования вещей")
