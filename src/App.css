@@ -1529,7 +1529,7 @@ html {
 /* Невидимая grid-раскладка: без линий и рамок */
 .capsule-canvas-preview.grid {
   display: grid !important;
-  grid-template-columns: repeat(2, 1fr) !important;
+  grid-template-columns: repeat(2, 1fr) !important; /* 1-4 вещей — 2x2, без видимых линий */
   align-items: center !important;
   justify-items: center !important;
   gap: 6px !important;           /* визуальных линий нет, только расстояние */
