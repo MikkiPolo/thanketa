@@ -108,7 +108,26 @@ const CapsulePage = ({ profile, onBack, initialCapsule = null, isFavoritesView =
     try {
       const cachedCapsules = localStorage.getItem(`cached_capsules_${profile.telegram_id}`);
       if (cachedCapsules) {
-        const parsedCapsules = JSON.parse(cachedCapsules);
+        let parsedCapsules = JSON.parse(cachedCapsules);
+        // Миграция: если в кэше лежит объект с categories → разворачиваем в плоский список
+        try {
+          if (parsedCapsules && parsedCapsules.categories) {
+            const flat = [];
+            (parsedCapsules.categories || []).forEach(category => {
+              (category.fullCapsules || []).forEach(capsule => {
+                flat.push({
+                  id: capsule.id,
+                  name: capsule.name || category.name || 'Капсула',
+                  description: capsule.description || category.description || '',
+                  items: capsule.items || [],
+                  category: category.id
+                });
+              });
+            });
+            parsedCapsules = flat;
+            localStorage.setItem(`cached_capsules_${profile.telegram_id}`, JSON.stringify(flat));
+          }
+        } catch (_) {}
         // Проверяем, что кэш не устарел (24 часа)
         const cacheTime = localStorage.getItem(`cached_capsules_time_${profile.telegram_id}`);
         if (cacheTime && (Date.now() - parseInt(cacheTime)) < 24 * 60 * 60 * 1000) {
@@ -249,13 +268,23 @@ const CapsulePage = ({ profile, onBack, initialCapsule = null, isFavoritesView =
         console.log('🔧 BACKEND_URL:', BACKEND_URL);
         console.log('🔧 API_ENDPOINTS.GENERATE_CAPSULES:', API_ENDPOINTS.GENERATE_CAPSULES);
         
+        const slimWardrobe = (wardrobe || []).map(it => ({
+          id: it.id,
+          category: it.category,
+          season: it.season,
+          description: it.description,
+          is_suitable: it.is_suitable
+        }));
+
         const response = await fetch(fullUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
+          mode: 'cors',
+          cache: 'no-store',
           body: JSON.stringify({
-            wardrobe: wardrobe,
+            wardrobe: slimWardrobe,
             profile: profile,
             weather: weather
           }),
