@@ -1500,17 +1500,18 @@ html {
   border: none !important;
   cursor: pointer;
   transition: all 0.2s ease;
-  aspect-ratio: 1 !important;
+  aspect-ratio: auto !important;
   display: flex !important;
-  align-items: center;
-  justify-content: center;
+  flex-direction: column !important; /* название под превью */
+  align-items: stretch !important;
+  justify-content: flex-start !important;
   overflow: hidden;
   width: 100% !important;
   height: auto !important;
-  min-height: 200px !important;
-  max-height: 200px !important;
-  padding: 0 !important;
+  padding: 10px !important;
   margin: 0 !important;
+  border-radius: 14px !important;
+  position: relative !important;
 }
 
 .capsule-card:hover {
@@ -1520,66 +1521,74 @@ html {
 .capsule-outfit-preview {
   position: relative;
   width: 100%;
-  height: 100%;
   background: transparent;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
+  display: grid !important; /* всегда сетка для стабильности */
+  grid-template-columns: repeat(2, 1fr) !important;
+  grid-auto-rows: auto !important;
+  gap: 8px !important;
+  align-items: center !important;
+  justify-items: center !important;
 }
 
 .capsule-item-preview-overlay {
-  position: absolute;
-  width: 60px;
-  height: 60px;
+  position: static !important; /* отключаем абсолютные позиции */
+  width: 100% !important;
+  aspect-ratio: 1 / 1 !important;
+  height: auto !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: #ffffff !important;
+  border-radius: 10px !important;
+  overflow: hidden !important;
   transition: all 0.3s ease;
 }
 
 /* Позиционирование превью по индексу для избежания наложения */
-.capsule-item-preview-overlay:nth-child(1) {
-  top: 10%;
-  left: 20%;
-  z-index: 1;
-}
-
-.capsule-item-preview-overlay:nth-child(2) {
-  top: 15%;
-  right: 25%;
-  z-index: 2;
-}
-
-.capsule-item-preview-overlay:nth-child(3) {
-  bottom: 20%;
-  left: 30%;
-  z-index: 3;
-}
-
+/* отключаем старое позиционирование превью */
+.capsule-item-preview-overlay:nth-child(1),
+.capsule-item-preview-overlay:nth-child(2),
+.capsule-item-preview-overlay:nth-child(3),
 .capsule-item-preview-overlay:nth-child(4) {
-  bottom: 15%;
-  right: 20%;
-  z-index: 4;
+  top: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+  left: auto !important;
+  z-index: auto !important;
 }
 
 /* Дополнительные позиции для большего количества предметов */
-.capsule-item-preview-overlay:nth-child(5) {
-  top: 50%;
-  left: 10%;
-  transform: translateY(-50%);
-  z-index: 5;
-}
-
+.capsule-item-preview-overlay:nth-child(5),
 .capsule-item-preview-overlay:nth-child(6) {
-  top: 50%;
-  right: 10%;
-  transform: translateY(-50%);
-  z-index: 6;
+  top: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+  left: auto !important;
+  transform: none !important;
+  z-index: auto !important;
 }
 
 .capsule-item-preview-overlay img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  background: transparent;
+  width: 90% !important;
+  height: 90% !important;
+  object-fit: contain !important;
+  background: transparent !important;
+}
+
+/* 3-колоночное превью при большем количестве вещей */
+.capsule-outfit-preview.grid-3 {
+  grid-template-columns: repeat(3, 1fr) !important;
+  gap: 6px !important;
+}
+
+/* Название капсулы под превью */
+.capsule-name {
+  margin-top: 10px !important;
+  text-align: center !important;
+  width: 100% !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  color: var(--color-text-primary) !important;
 }
 
 
