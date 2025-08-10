@@ -15,6 +15,20 @@ class TelegramWebApp {
     try {
       this.webApp.ready();
       this.webApp.expand();
+      // применяем VisualViewport offsets для iOS клавиатуры
+      try {
+        const applyViewportOffsets = () => {
+          const vv = window.visualViewport;
+          if (!vv) return;
+          const occludedBottom = Math.max(0, (window.innerHeight - (vv.height + vv.offsetTop)));
+          document.documentElement.style.setProperty('--vv-bottom', `${occludedBottom}px`);
+        };
+        if (window.visualViewport) {
+          window.visualViewport.addEventListener('resize', applyViewportOffsets);
+          window.visualViewport.addEventListener('scroll', applyViewportOffsets);
+          applyViewportOffsets();
+        }
+      } catch (e) { /* ignore */ }
       console.log('Telegram Web App инициализирован');
       return true;
     } catch (error) {
