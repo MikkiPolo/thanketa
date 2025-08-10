@@ -668,6 +668,7 @@ def generate_capsules():
         use_rule = engine != 'gpt' or data.get('rule_engine') == True
         if use_rule and rule_generate_capsules:
             print('🧩 Используем rule-based генератор капсул (engine=rule, по умолчанию)')
+            print(f'📊 Статистика гардероба: всего {len(wardrobe)} вещей')
             current_season = get_season_from_weather_simple(weather)
             temp_c = weather.get('main', {}).get('temp') or weather.get('temperature', 20)
             try:
@@ -676,6 +677,7 @@ def generate_capsules():
                 temp_c = 20.0
             # Лимит 20 капсул и исключение уже показанных комбинаций (если пришли с фронта)
             exclude_combos = data.get('exclude_combinations') or []
+            print(f'🔧 Параметры генерации: сезон={current_season}, температура={temp_c}, max_total=30')
             capsules_core = rule_generate_capsules(
                 wardrobe_items=wardrobe,
                 season_hint=current_season,

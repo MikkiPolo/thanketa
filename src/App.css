@@ -1520,10 +1520,10 @@ html {
 .capsule-canvas-preview {
   position: relative !important;
   width: 100% !important;
-  height: 120px !important; /* Увеличиваем высоту с 100px до 120px */
-  background: #fff !important;
+  background: #fff !important; /* белый холст */
   border-radius: 12px !important;
   overflow: hidden !important;
+  aspect-ratio: 4 / 5 !important; /* стабильные пропорции */
   margin-bottom: 8px !important;
 }
 
