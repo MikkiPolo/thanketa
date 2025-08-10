@@ -66,6 +66,17 @@ from typing import List, Dict, Any
 import logging
 from functools import lru_cache
 import openai
+import json as _json_for_cache
+
+# Redis client (optional)
+try:
+    import redis as _redis
+    _redis_client = _redis.from_url(getattr(Config, 'REDIS_URL', 'redis://localhost:6379'))
+    _ = _redis_client.ping()
+    print(f"✅ Redis подключен: {Config.REDIS_URL}")
+except Exception as _re:
+    print(f"⚠️ Redis недоступен или не сконфигурирован: {_re}")
+    _redis_client = None
 
 # Настройка логгера
 logger = logging.getLogger(__name__)
@@ -615,7 +626,29 @@ def generate_capsules():
         if not wardrobe:
             return jsonify({'error': 'No wardrobe items provided'}), 400
         
-        # Generate capsules using AI
+        # Ключ кэша по профилю+гардеробу+погоде
+        try:
+            cache_key_src = {
+                'wardrobe': wardrobe,
+                'profile': profile,
+                'weather': weather
+            }
+            cache_key_hash = hashlib.sha256(_json_for_cache.dumps(cache_key_src, ensure_ascii=False, sort_keys=True).encode('utf-8')).hexdigest()
+            cache_key = f"capsules:{cache_key_hash}"
+        except Exception:
+            cache_key = None
+
+        # Попытка отдать из кэша
+        if _redis_client and cache_key:
+            try:
+                cached = _redis_client.get(cache_key)
+                if cached:
+                    cached_obj = json.loads(cached)
+                    return jsonify(cached_obj)
+            except Exception:
+                pass
+
+        # Generate capsules using AI (без кэша)
         capsules_payload = generate_capsules_with_ai(wardrobe, profile, weather)
 
         # Backward/forward compatible shape: flatten to {capsules, meta}
@@ -627,11 +660,21 @@ def generate_capsules():
             capsules_obj = capsules_payload
             meta_obj = {}
 
-        return jsonify({
+        response_obj = {
             'capsules': capsules_obj,
             'meta': meta_obj,
             'message': 'Capsules generated successfully'
-        })
+        }
+
+        # Сохраняем в кэш
+        if _redis_client and cache_key:
+            try:
+                ttl = getattr(Config, 'REDIS_TTL', 6 * 60 * 60)
+                _redis_client.setex(cache_key, ttl, json.dumps(response_obj, ensure_ascii=False))
+            except Exception:
+                pass
+
+        return jsonify(response_obj)
         
     except TimeoutError as e:
         print(f"Timeout generating capsules: {str(e)}")

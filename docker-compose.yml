@@ -1,4 +1,10 @@
 services:
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
   traefik:
     image: traefik:v2.10
     command:
@@ -23,6 +29,10 @@ services:
       dockerfile: Dockerfile
     env_file:
       - ./backend/.env
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - GUNICORN_WORKERS=5
+      - GUNICORN_THREADS=2
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.backend.rule=Host(`linapolo.store`) && PathPrefix(`/api`)"
@@ -49,4 +59,8 @@ services:
       - "traefik.http.services.front.loadbalancer.server.port=80"
     depends_on:
       - backend
+      - redis
     restart: unless-stopped
+
+volumes:
+  redis-data:

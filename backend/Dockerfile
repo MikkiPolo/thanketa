@@ -12,4 +12,7 @@ COPY . /app
 
 EXPOSE 5001
 # Entrypoint: app module is at /app/app.py (context is ./backend)
-CMD ["gunicorn","-w","2","-b","0.0.0.0:5001","--timeout","120","app:app"]
+# Allow tuning workers/threads via env (fallback to sensible defaults)
+ENV GUNICORN_WORKERS=${GUNICORN_WORKERS:-5}
+ENV GUNICORN_THREADS=${GUNICORN_THREADS:-2}
+CMD bash -lc "gunicorn -w ${GUNICORN_WORKERS} --threads ${GUNICORN_THREADS} -k gthread -b 0.0.0.0:5001 --timeout 120 app:app"
