@@ -653,9 +653,12 @@ def generate_capsules_with_ai(wardrobe, profile, weather):
             total_caps = sum(len(cat.get('fullCapsules', [])) for cat in result.get('categories', []))
         except Exception:
             total_caps = 0
+        meta_hint = result.get('meta_hint') if isinstance(result, dict) else None
         meta = {
             'total_capsules': total_caps,
-            'insufficient': total_caps < 6
+            'insufficient': total_caps < 6,
+            'source': (meta_hint or {}).get('source', 'gpt'),
+            'reason': (meta_hint or {}).get('reason')
         }
         return { 'capsules': result, 'meta': meta }
             
@@ -674,67 +677,48 @@ def generate_capsules_with_ai(wardrobe, profile, weather):
             total_caps = 0
         meta = {
             'total_capsules': total_caps,
-            'insufficient': total_caps < 6
+            'insufficient': total_caps < 6,
+            'source': 'fallback',
+            'reason': str(e)
         }
         return { 'capsules': result, 'meta': meta }
 
 def is_valid_clothing_combination(item_ids, wardrobe):
-    """Проверяет, является ли комбинация одежды логически корректной"""
+    """Проверяет, является ли комбинация одежды логически корректной.
+    Все проверки выполняются по нормализованным категориям через translate_category.
+    """
     wardrobe_dict = {str(item['id']): item for item in wardrobe}
-    
-    # Получаем категории вещей в капсуле
-    categories = []
+
+    # Получаем нормализованные категории вещей в капсуле
+    norm_categories = []
     for item_id in item_ids:
         item = wardrobe_dict.get(str(item_id))
         if item:
-            category = item.get('category', '').lower()
-            categories.append(category)
-    
-    # Проверяем наличие платья
-    dress_categories = ['платье', 'dress', 'сарафан']
-    has_dress = any(cat in dress_categories for cat in categories)
-    
+            norm_categories.append(translate_category(item.get('category', '')))
+
+    has_dress = any(cat == 'dresses' for cat in norm_categories)
+
     if has_dress:
-        # Если есть платье, проверяем, что нет конфликтующих вещей
-        conflicting_with_dress = [
-            'блузка', 'блуза', 'рубашка', 'топ', 'футболка', 'свитер', 'кофта', 'водолазка',
-            'юбка', 'джинсы', 'брюки', 'шорты', 'леггинсы',
-            'blouse', 'shirt', 'top', 't-shirt', 'sweater', 'turtleneck',
-            'skirt', 'jeans', 'pants', 'shorts', 'leggings'
-        ]
-        
-        for cat in categories:
-            if cat in conflicting_with_dress:
-                print(f"❌ Платье не может сочетаться с {cat}")
-                return False
-    
-    # Проверяем, что нет нескольких нижних частей одновременно
-    bottom_categories = [
-        'юбка', 'джинсы', 'брюки', 'шорты', 'леггинсы',
-        'skirt', 'jeans', 'pants', 'shorts', 'leggings'
-    ]
-    bottom_count = sum(1 for cat in categories if cat in bottom_categories)
-    
+        # Платье не сочетается с низами и вторым «верхом» (топ/рубашка/свитер)
+        if any(cat in ('bottoms', 'tops') for cat in norm_categories if cat != 'dresses'):
+            print("❌ Платье не может сочетаться с топами или нижней частью")
+            return False
+
+    # Ровно один низ при отсутствии платья
+    bottom_count = sum(1 for cat in norm_categories if cat == 'bottoms')
+    if not has_dress and bottom_count == 0:
+        print("❌ Образ без платья должен содержать один низ")
+        return False
     if bottom_count > 1:
-        print(f"❌ Нельзя надеть несколько нижних частей одновременно")
+        print("❌ Нельзя надеть несколько нижних частей одновременно")
         return False
 
-    # Требуем наличие низа, если нет платья
-    if not has_dress and bottom_count == 0:
-        print("❌ Образ без платья должен содержать один низ (юбка/брюки/джинсы/шорты)")
-        return False
-    
-    # Проверяем, что нет нескольких верхних частей одновременно (кроме аксессуаров и верхней одежды)
-    top_categories = [
-        'блузка', 'блуза', 'рубашка', 'топ', 'футболка', 'свитер', 'кофта', 'водолазка',
-        'blouse', 'shirt', 'top', 't-shirt', 'sweater', 'turtleneck'
-    ]
-    top_count = sum(1 for cat in categories if cat in top_categories)
-    
+    # Не больше одного верха (outerwear допускается отдельно)
+    top_count = sum(1 for cat in norm_categories if cat == 'tops')
     if top_count > 1:
-        print(f"❌ Нельзя надеть несколько верхних частей одновременно")
+        print("❌ Нельзя надеть несколько верхних частей одновременно")
         return False
-    
+
     return True
 
 def generate_capsules_with_gpt(wardrobe, profile, weather):
@@ -1028,6 +1012,10 @@ def generate_capsules_with_gpt(wardrobe, profile, weather):
         print(f"Доступные ID вещей: {valid_ids}")
         
         wardrobe_dict = {str(item['id']): item for item in filtered_wardrobe}
+        # Пулы по нормализованным категориям
+        accessory_ids = [str(it['id']) for it in filtered_wardrobe if translate_category(it.get('category','')) == 'accessories']
+        shoe_ids = [str(it['id']) for it in filtered_wardrobe if translate_category(it.get('category','')) == 'shoes']
+
         # Лимит на повторное использование одной вещи: не более 3 раз на 10 капсул
         item_usage = {}
         excluded_ids_for_fix = compute_unsuitable_ids(profile, filtered_wardrobe)
@@ -1057,14 +1045,8 @@ def generate_capsules_with_gpt(wardrobe, profile, weather):
                     print(f"Капсула {capsule.get('id', 'unknown')} отклонена: нелогичная комбинация одежды")
                     continue
                 
-                # Проверяем наличие обуви в капсуле
-                has_shoes = False
-                for item_id in valid_items:
-                    item = wardrobe_dict.get(str(item_id))
-                    if item and item.get('category', '').lower() == 'обувь':
-                        has_shoes = True
-                        break
-                
+                # Проверяем наличие обуви по нормализованным категориям
+                has_shoes = any(translate_category(wardrobe_dict.get(str(item_id), {}).get('category','')) == 'shoes' for item_id in valid_items)
                 if not has_shoes:
                     print(f"Капсула {capsule.get('id', 'unknown')} отклонена: нет обуви")
                     continue
@@ -1094,6 +1076,14 @@ def generate_capsules_with_gpt(wardrobe, profile, weather):
                         for iid in valid_items:
                             item_usage[iid] = max(0, item_usage.get(iid, 1) - 1)
                         continue
+
+                    # По возможности добавляем 1 аксессуар, если его нет и есть место (до 4 предметов)
+                    has_accessory = any(translate_category(wardrobe_dict.get(str(i), {}).get('category','')) == 'accessories' for i in valid_items)
+                    if not has_accessory and len(valid_items) < 4 and accessory_ids:
+                        add_acc = next((aid for aid in accessory_ids if aid not in valid_items), None)
+                        if add_acc:
+                            valid_items.append(add_acc)
+                            item_usage[add_acc] = item_usage.get(add_acc, 0) + 1
                     capsule['items'] = valid_items
                     valid_capsules.append(capsule)
                 else:
@@ -1269,13 +1259,20 @@ def translate_category(category):
     category_mapping = {
         # Верхняя одежда
         'топ': 'tops',
+        'топик': 'tops',
         'рубашка': 'tops',
+        'поло': 'tops',
         'футболка': 'tops',
+        'лонгслив': 'tops',
+        'свитшот': 'tops',
         'свитер': 'tops',
         'водолазка': 'tops',
         'блузка': 'tops',
         'кофта': 'tops',
         'джемпер': 'tops',
+        'майка': 'tops',
+        'hoodie': 'tops',
+        'худи': 'tops',
         
         # Нижняя одежда
         'брюки': 'bottoms',
@@ -1303,6 +1300,10 @@ def translate_category(category):
         'кроссовки': 'shoes',
         'сандалии': 'shoes',
         'балетки': 'shoes',
+        'кеды': 'shoes',
+        'лоферы': 'shoes',
+        'мокасины': 'shoes',
+        'ботильоны': 'shoes',
         
         # Аксессуары
         'сумка': 'accessories',
@@ -1310,12 +1311,20 @@ def translate_category(category):
         'шарф': 'accessories',
         'шапка': 'accessories',
         'пояс': 'accessories',
+        'ремень': 'accessories',
         'украшения': 'accessories',
-        'часы': 'accessories'
+        'часы': 'accessories',
+        'браслет': 'accessories',
+        'кольцо': 'accessories',
+        'серьги': 'accessories',
+        'ожерелье': 'accessories',
+        'кулон': 'accessories',
+        'цепочка': 'accessories',
+        'ободок': 'accessories'
     }
     
     # Приводим к нижнему регистру для сравнения
-    category_lower = category.lower().strip()
+    category_lower = (category or '').lower().strip()
     return category_mapping.get(category_lower, 'accessories')
 
 def create_simple_capsules(wardrobe, profile, weather):
