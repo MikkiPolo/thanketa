@@ -60,6 +60,10 @@ from datetime import datetime
 from dotenv import load_dotenv
 from config import Config
 from ai_wardrobe_analyzer import AIWardrobeAnalyzer, AIAnalyzerFactory, UserFeedback, AnalysisResult
+try:
+    from capsule_engine_v2 import generate_capsules as rule_generate_capsules
+except Exception:
+    rule_generate_capsules = None
 import json
 import hashlib
 from typing import List, Dict, Any
@@ -631,7 +635,8 @@ def generate_capsules():
             cache_key_src = {
                 'wardrobe': wardrobe,
                 'profile': profile,
-                'weather': weather
+                'weather': weather,
+                'engine': str((request.get_json() or {}).get('engine') or (request.get_json() or {}).get('rule_engine') or (request.get_json() or {}).get('no_gpt'))
             }
             cache_key_hash = hashlib.sha256(_json_for_cache.dumps(cache_key_src, ensure_ascii=False, sort_keys=True).encode('utf-8')).hexdigest()
             cache_key = f"capsules:{cache_key_hash}"
@@ -657,8 +662,34 @@ def generate_capsules():
             elif not cache_key:
                 print("⚠️ cache_key не создан — кэш пропущен")
 
-        # Generate capsules using AI (без кэша)
-        capsules_payload = generate_capsules_with_ai(wardrobe, profile, weather)
+        # Выбор движка: rule-based или GPT
+        engine = str(data.get('engine') or data.get('rule_engine') or data.get('no_gpt') or '').lower()
+        if engine in ['1','true','yes','rule','rule_engine'] and rule_generate_capsules:
+            print('🧩 Используем rule-based генератор капсул (engine=rule)')
+            current_season = get_season_from_weather_simple(weather)
+            temp_c = weather.get('main', {}).get('temp') or weather.get('temperature', 20)
+            try:
+                temp_c = float(temp_c)
+            except Exception:
+                temp_c = 20.0
+            capsules_core = rule_generate_capsules(
+                wardrobe_items=wardrobe,
+                season_hint=current_season,
+                temp_c=temp_c,
+                predpochtenia=profile.get('predpochtenia','Повседневный'),
+                figura=profile.get('figura',''),
+                cvetotip=profile.get('cvetotip',''),
+                banned_ids=list(compute_unsuitable_ids(profile, wardrobe)),
+                allowed_ids=None,
+                max_per_item=3,
+                acc_per_outfit=(1,2),
+                include_outerwear_below=18.0,
+                max_total=None
+            )
+            capsules_payload = { 'capsules': capsules_core, 'meta': { 'source': 'rule' } }
+        else:
+            # Generate capsules using GPT (без кэша)
+            capsules_payload = generate_capsules_with_ai(wardrobe, profile, weather)
 
         # Backward/forward compatible shape: flatten to {capsules, meta}
         if isinstance(capsules_payload, dict) and 'capsules' in capsules_payload:
