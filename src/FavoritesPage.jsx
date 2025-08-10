@@ -140,9 +140,9 @@ const FavoritesPage = ({ telegramId, showNotification }) => {
                 className="capsule-card"
                 onClick={() => setSelectedCapsule(favorite)}
               >
-                <div className={`capsule-outfit-preview ${grid3 ? 'grid-3' : ''}`}>
+                <div className={`capsule-canvas-preview grid ${picked.length > 6 ? 'grid-3' : ''}`}>
                   {picked.map((item, index) => (
-                    <div key={index} className="capsule-item-preview-overlay">
+                    <div key={index} className="capsule-canvas-item">
                       {item.imageUrl && item.imageUrl !== 'null' && (
                         <img 
                           src={item.imageUrl} 
