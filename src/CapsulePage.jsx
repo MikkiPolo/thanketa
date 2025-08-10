@@ -410,22 +410,34 @@ const CapsulePage = ({ profile, onBack, initialCapsule = null, isFavoritesView =
   const getPreviewPositions = (items) => {
     if (!Array.isArray(items)) return [];
     const toLower = (s) => (s || '').toLowerCase();
-    const findFirst = (arr, set) => arr.find((it) => set.has(toLower(it.category)));
 
-    const topSet = new Set(['блузка','футболка','рубашка','свитер','топ','джемпер','кофта','водолазка']);
-    const bottomSet = new Set(['юбка','брюки','джинсы','шорты','легинсы','леггинсы']);
-    const dressSet = new Set(['платье','сарафан']);
-    const shoesSet = new Set(['обувь','туфли','ботинки','кроссовки','сапоги','сандалии','мокасины','балетки']);
-    const accSet = new Set(['сумка','аксессуары','украшения','пояс','шарф','часы','очки','серьги','колье','браслет','рюкзак']);
-    const outerSet = new Set(['пиджак','куртка','пальто','кардиган','жакет','жилет']);
+    // Классификация с учётом синонимов и описаний
+    const isOneOf = (val, list) => list.includes(toLower(val));
+    const classify = (it) => {
+      const c = toLower(it.category);
+      const d = toLower(it.description);
+      if (isOneOf(c, ['платье', 'сарафан'])) return 'dress';
+      if (isOneOf(c, ['пиджак', 'куртка', 'пальто', 'кардиган', 'жакет', 'жилет'])) return 'outer';
+      if (isOneOf(c, ['юбка','брюки','джинсы','шорты','легинсы','леггинсы'])) return 'bottom';
+      if (
+        isOneOf(c, ['обувь','туфли','ботинки','кроссовки','сапоги','сандалии','мокасины','балетки','шлепки','сланцы','тапки','тапочки','мюли','сабо']) ||
+        /(туфл|ботин|кросс|сапог|сандал|мокасин|балетк|шлеп|сланц|тапоч|мюл|сабо)/.test(d)
+      ) return 'shoes';
+      if (isOneOf(c, ['сумка','аксессуары','украшения','пояс','шарф','часы','очки','серьги','колье','браслет','рюкзак'])) return 'acc';
+      if (isOneOf(c, ['блузка','футболка','рубашка','свитер','топ','джемпер','кофта','водолазка'])) return 'top';
+      return 'other';
+    };
 
-    const itemsCopy = [...items];
-    const dress = findFirst(itemsCopy, dressSet);
-    const top = findFirst(itemsCopy, topSet);
-    const bottom = findFirst(itemsCopy, bottomSet);
-    const shoes = findFirst(itemsCopy, shoesSet);
-    const outer = findFirst(itemsCopy, outerSet);
-    const accessories = itemsCopy.filter((it) => accSet.has(toLower(it.category))).slice(0, 2);
+    const typed = items.map((it) => ({ it, t: classify(it) }));
+    const getFirst = (t) => typed.find((x) => x.t === t)?.it;
+    const getMany = (t, limit = 2) => typed.filter((x) => x.t === t).map((x) => x.it).slice(0, limit);
+
+    const dress = getFirst('dress');
+    const top = getFirst('top');
+    const bottom = getFirst('bottom');
+    const shoes = getFirst('shoes');
+    const outer = getFirst('outer');
+    const accessories = getMany('acc', 2);
 
     const count = items.length;
     const scale = count >= 5 ? 0.9 : 1.0;
