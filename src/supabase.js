@@ -64,9 +64,13 @@ export const wardrobeService = {
     return data || []
   },
 
-  // Пометить вещь как подходящую/неподходящую
-  async setItemSuitability(id, isSuitable) {
+  // Пометить вещь как подходящую/неподходящую с сохранением причины в ban_reason
+  async setItemSuitability(id, isSuitable, reason = null) {
     const payload = { is_suitable: !!isSuitable }
+    // Если помечаем как неподходящую — записываем причину в ban_reason
+    if (isSuitable === false) {
+      payload.ban_reason = (typeof reason === 'string' && reason.length > 0) ? reason : null
+    }
     const { data, error } = await supabase
       .from('wardrobe')
       .update(payload)

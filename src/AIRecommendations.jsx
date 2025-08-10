@@ -29,7 +29,8 @@ const AIRecommendations = ({ profile, wardrobe }) => {
             const mod = await import('./supabase');
             for (const u of unsuitableItems) {
               if (u && u.id) {
-                mod.wardrobeService.setItemSuitability(u.id, false);
+                const reason = u.reason || u.unsuitable_reason || '';
+                mod.wardrobeService.setItemSuitability(u.id, false, reason);
               }
             }
           }
