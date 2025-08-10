@@ -1116,24 +1116,9 @@ def generate_capsules_with_gpt(wardrobe, profile, weather):
             category['fullCapsules'] = valid_capsules
             category['examples'] = valid_capsules[:3]
         
-        # 9. Если капсул слишком мало, дополняем простыми
+        # 9. Возвращаем только результат GPT (без автодобавления fallback)
         total_capsules = sum(len(cat['fullCapsules']) for cat in result['categories'])
-        print(f"GPT сгенерировал {total_capsules} валидных капсул")
-        
-        if total_capsules < 8:
-            print("Мало капсул от GPT, дополняем простыми")
-            # ВАЖНО: используем уже отфильтрованный по сезону и пригодности гардероб
-            fallback = create_simple_capsules(filtered_wardrobe, profile, weather)
-            
-            # Добавляем fallback капсулы
-            if fallback and 'categories' in fallback:
-                for fb_cat in fallback['categories']:
-                    for result_cat in result['categories']:
-                        if result_cat['id'] == fb_cat['id']:
-                            result_cat['fullCapsules'].extend(fb_cat['fullCapsules'])
-                            result_cat['examples'] = result_cat['fullCapsules'][:3]
-                            break
-        
+        print(f"GPT сгенерировал {total_capsules} валидных капсул (fallback не добавляется)")
         return result
         
     except Exception as e:
@@ -1196,11 +1181,13 @@ def filter_wardrobe_by_season(wardrobe, season):
         return wardrobe
     
     keywords = season_mapping[season]
+    # Всесезонные (круглогодичные) вещи включаются для любого сезона
+    all_season_keywords = ["круглогод", "всесезон"]
     filtered = []
     
     for item in wardrobe:
         item_season = item.get('season', '').lower()
-        if any(keyword in item_season for keyword in keywords):
+        if any(keyword in item_season for keyword in keywords) or any(k in item_season for k in all_season_keywords):
             filtered.append(item)
     
     return filtered if filtered else wardrobe
