@@ -960,13 +960,13 @@ const CapsulePage = ({ profile, onBack, initialCapsule = null, isFavoritesView =
                     className="capsule-card"
                     onClick={() => setSelectedCapsule(capsule)}
                   >
-                    <div className="capsule-canvas-preview">
+                    <div className={`capsule-canvas-preview ${preview.length > 4 ? 'grid ' + (preview.length > 6 ? 'grid-3' : '') : ''}`}>
                       {getPreviewPositions(preview).map((p, index) => (
                         <div
                           key={index}
                           className="capsule-canvas-item"
                           data-category={p.item.category?.toLowerCase()}
-                          style={{ left: `${p.left}%`, top: `${p.top}%`, width: `${p.width}%`, zIndex: p.z || 1 }}
+                          style={preview.length > 4 ? undefined : { left: `${p.left}%`, top: `${p.top}%`, width: `${p.width}%`, zIndex: p.z || 1 }}
                         >
                           {p.item.imageUrl && p.item.imageUrl !== 'null' && (
                             <img
