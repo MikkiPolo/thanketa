@@ -395,7 +395,7 @@ html, body {
 /* Специальные стили для карточки с детальным просмотром вещи */
 .card:has(.item-detail-content) {
   height: 100vh;
-  overflow: hidden;
+  overflow: visible; /* чтобы fixed блоки не обрезались в WebView */
   display: flex;
   flex-direction: column;
 }
@@ -406,7 +406,7 @@ html, body {
   }
   
   .item-detail-actions {
-    bottom: 80px;
+    bottom: calc(80px + env(safe-area-inset-bottom, 0px));
   }
   
   .item-detail-content {
@@ -1111,10 +1111,10 @@ button.next:disabled {
   background: var(--card-bg);
   border-top: 1px solid var(--border-color);
   position: fixed;
-  bottom: 80px;
+  bottom: calc(80px + env(safe-area-inset-bottom, 0px));
   left: 0;
   right: 0;
-  z-index: 5;
+  z-index: 10001;
 }
 
 /* Выравниваем размеры кнопок внизу карточки */
