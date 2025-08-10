@@ -258,9 +258,9 @@ const CapsulePage = ({ profile, onBack, initialCapsule = null, isFavoritesView =
 
   const generateCapsulesFromWardrobe = async (wardrobe, profile, weather, options = {}) => {
     try {
-      // Отправляем запрос на бэкенд для генерации капсул с таймаутом 90 секунд
+      // Отправляем запрос на бэкенд для генерации капсул с таймаутом 120 секунд
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 90000); // 90 секунд
+      const timeoutId = setTimeout(() => controller.abort(), 120000); // 120 секунд
       
       try {
         const fullUrl = `${BACKEND_URL}${API_ENDPOINTS.GENERATE_CAPSULES}`;
