@@ -638,15 +638,24 @@ def generate_capsules():
         except Exception:
             cache_key = None
 
-        # Попытка отдать из кэша
-        if _redis_client and cache_key:
+        # Попытка отдать из кэша (можно отключить флагом no_cache=true)
+        no_cache = str(data.get('no_cache') or data.get('force_refresh') or '').lower() in ['1','true','yes']
+        if _redis_client and cache_key and not no_cache:
             try:
                 cached = _redis_client.get(cache_key)
                 if cached:
+                    print(f"🟢 CACHE HIT: {cache_key}")
                     cached_obj = json.loads(cached)
                     return jsonify(cached_obj)
             except Exception:
-                pass
+                print(f"⚠️ CACHE ERROR (read): {cache_key}")
+        else:
+            if no_cache:
+                print("⛔ no_cache=true — пропускаем кэш")
+            elif not _redis_client:
+                print("⚠️ Redis недоступен — кэш пропущен")
+            elif not cache_key:
+                print("⚠️ cache_key не создан — кэш пропущен")
 
         # Generate capsules using AI (без кэша)
         capsules_payload = generate_capsules_with_ai(wardrobe, profile, weather)
@@ -671,8 +680,9 @@ def generate_capsules():
             try:
                 ttl = getattr(Config, 'REDIS_TTL', 6 * 60 * 60)
                 _redis_client.setex(cache_key, ttl, json.dumps(response_obj, ensure_ascii=False))
+                print(f"🟡 CACHE SET: {cache_key} ttl={ttl}")
             except Exception:
-                pass
+                print(f"⚠️ CACHE ERROR (write): {cache_key}")
 
         return jsonify(response_obj)
         
