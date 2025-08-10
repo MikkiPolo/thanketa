@@ -616,10 +616,20 @@ def generate_capsules():
             return jsonify({'error': 'No wardrobe items provided'}), 400
         
         # Generate capsules using AI
-        capsules = generate_capsules_with_ai(wardrobe, profile, weather)
-        
+        capsules_payload = generate_capsules_with_ai(wardrobe, profile, weather)
+
+        # Backward/forward compatible shape: flatten to {capsules, meta}
+        if isinstance(capsules_payload, dict) and 'capsules' in capsules_payload:
+            capsules_obj = capsules_payload.get('capsules')
+            meta_obj = capsules_payload.get('meta', {})
+        else:
+            # fallback if helper returned plain structure
+            capsules_obj = capsules_payload
+            meta_obj = {}
+
         return jsonify({
-            'capsules': capsules,
+            'capsules': capsules_obj,
+            'meta': meta_obj,
             'message': 'Capsules generated successfully'
         })
         
