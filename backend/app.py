@@ -1001,6 +1001,22 @@ def generate_capsules_with_gpt(wardrobe, profile, weather):
         print(f"API ключ установлен: {'Да' if api_key else 'Нет'}")
         
         # 5. Отправляем запрос к GPT
+        # Диагностика: выводим значения переменных, используемых в системном промпте
+        try:
+            sys_prompt_vars = {
+                'name': profile.get('name', 'клиента'),
+                'user_figura': user_figura,
+                'user_colortype': user_colortype,
+                'like_zone': profile.get('like_zone', ''),
+                'dislike_zone': profile.get('dislike_zone', ''),
+                'ideal_colors': color_advice.get('идеальные', 'подходящие')
+            }
+            print('=== SYSTEM PROMPT VARIABLES ===')
+            print(json.dumps(sys_prompt_vars, ensure_ascii=False, indent=2))
+            print('=== END SYSTEM PROMPT VARIABLES ===')
+        except Exception as _spv_err:
+            print(f"⚠️ Не удалось вывести переменные системного промпта: {_spv_err}")
+
         try:
             response = client.chat.completions.create(
                 model="gpt-4o-mini",
