@@ -966,8 +966,8 @@ const CapsulePage = ({ profile, onBack, initialCapsule = null, isFavoritesView =
             
             <div className="capsules-grid">
               {capsules.map((capsule) => {
-                const preview = getPreviewItems(capsule.items || []);
-                const moreCount = (capsule.items?.length || 0) - preview.length;
+                const preview = capsule.items || [];
+                const moreCount = 0;
                 return (
                   <div 
                     key={capsule.id} 
@@ -975,17 +975,16 @@ const CapsulePage = ({ profile, onBack, initialCapsule = null, isFavoritesView =
                     onClick={() => setSelectedCapsule(capsule)}
                   >
                     <div className={`capsule-canvas-preview grid ${preview.length > 6 ? 'grid-3' : ''}`}>
-                      {getPreviewPositions(preview).map((p, index) => (
+                      {preview.map((it, index) => (
                         <div
                           key={index}
                           className="capsule-canvas-item"
-                          data-category={p.item.category?.toLowerCase()}
-                          style={undefined}
+                          data-category={it.category?.toLowerCase()}
                         >
-                          {p.item.imageUrl && p.item.imageUrl !== 'null' && (
+                          {it.imageUrl && it.imageUrl !== 'null' && (
                             <img
-                              src={p.item.imageUrl}
-                              alt={p.item.description}
+                              src={it.imageUrl}
+                              alt={it.description}
                               onError={(e) => {
                                 if (e.target.src.includes('.png')) {
                                   e.target.src = e.target.src.replace('.png', '.jpg');
