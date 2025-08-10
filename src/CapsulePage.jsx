@@ -277,25 +277,27 @@ const CapsulePage = ({ profile, onBack, initialCapsule = null, isFavoritesView =
             throw new Error('Неверная структура ответа от бэкенда');
           }
           
-          // Преобразуем результат бэкенда в нужный формат
-          return result.capsules.categories.map(category => {
-            console.log(`Обрабатываем категорию ${category.id}:`, category);
-            
-            return {
-              ...category,
-              fullCapsules: (category.fullCapsules || []).map(capsule => ({
-                ...capsule,
-                items: sortItemsByCategory((capsule.items || []).map(itemId => {
-                  // Ищем только среди подходящих вещей (is_suitable !== false)
-                  const item = wardrobe.find(w => w.id === itemId && w.is_suitable !== false);
-                                  return item ? {
+          // Преобразуем результат бэкенда в плоский список капсул без категорий
+          const flat = [];
+          (result.capsules.categories || []).forEach(category => {
+            (category.fullCapsules || []).forEach(capsule => {
+              const itemsResolved = sortItemsByCategory((capsule.items || []).map(itemId => {
+                const item = wardrobe.find(w => w.id === itemId && w.is_suitable !== false);
+                return item ? {
                   ...item,
                   imageUrl: item.image_id ? wardrobeService.getImageUrl(profile.telegram_id, item.image_id) : null
                 } : null;
-                }).filter(Boolean))
-              }))
-            };
+              }).filter(Boolean));
+              flat.push({
+                id: capsule.id,
+                name: capsule.name || category.name || 'Капсула',
+                description: capsule.description || category.description || '',
+                items: itemsResolved,
+                category: category.id
+              });
+            });
           });
+          return flat;
         } else {
           console.error('Ошибка генерации капсул:', response.statusText);
           throw new Error(`Ошибка сервера: ${response.statusText}`);
@@ -830,63 +832,7 @@ const CapsulePage = ({ profile, onBack, initialCapsule = null, isFavoritesView =
     );
   }
 
-  if (selectedCategory) {
-    // Просмотр избранного
-
-
-    // Просмотр обычной категории
-    const category = capsules.find(c => c.id === selectedCategory);
-    return (
-      <div className="app capsules-page">
-        <div className="card" style={{ paddingTop: "calc(env(safe-area-inset-top) + 2rem)" }}>
-          <div className="item-detail-header">
-            <button className="btn-icon back-btn" onClick={() => setSelectedCategory(null)}>
-              <ArrowLeft size={20} />
-            </button>
-          </div>
-          
-          <h2>{category.name}</h2>
-          <p className="category-description">{category.description}</p>
-          
-          <div className="capsules-grid">
-            {category.fullCapsules.map((capsule) => {
-              const preview = getPreviewItems(capsule.items || []);
-              const moreCount = (capsule.items?.length || 0) - preview.length;
-              const grid3 = preview.length > 4;
-              return (
-                <div 
-                  key={capsule.id} 
-                  className="capsule-card"
-                  onClick={() => setSelectedCapsule(capsule)}
-                >
-                  <div className={`capsule-outfit-preview ${grid3 ? 'grid-3' : ''}`}>
-                    {preview.map((item, index) => (
-                      <div key={index} className="capsule-item-preview-overlay">
-                        {item.imageUrl && item.imageUrl !== 'null' && (
-                          <img 
-                            src={item.imageUrl} 
-                            alt={item.description}
-                            onError={(e) => {
-                              if (e.target.src.includes('.png')) {
-                                e.target.src = e.target.src.replace('.png', '.jpg');
-                              }
-                            }}
-                          />
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                  {moreCount > 0 && (
-                    <div className="capsule-more-badge">+{moreCount}</div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // Плоский список капсул
 
   return (
     <div className="app capsules-page">
@@ -897,7 +843,7 @@ const CapsulePage = ({ profile, onBack, initialCapsule = null, isFavoritesView =
           </button>
         </div>
         
-        {capsules ? (
+        {Array.isArray(capsules) ? (
           <>
             <div className="capsules-header">
               <h2>Капсулы гардероба</h2>
@@ -914,20 +860,41 @@ const CapsulePage = ({ profile, onBack, initialCapsule = null, isFavoritesView =
               </div>
             </div>
             
-            <div className="categories-grid">
-              {capsules.map((category) => (
-            <div 
-              key={category.id} 
-              className="category-card"
-              onClick={() => setSelectedCategory(category.id)}
-            >
-              <div className="category-icon">{getLucideIcon(category.icon)}</div>
-              <h3>{category.name}</h3>
-              <p>{category.description}</p>
-              
-               
-            </div>
-          ))}
+            <div className="capsules-grid">
+              {capsules.map((capsule) => {
+                const preview = getPreviewItems(capsule.items || []);
+                const moreCount = (capsule.items?.length || 0) - preview.length;
+                const grid3 = preview.length > 4;
+                return (
+                  <div 
+                    key={capsule.id} 
+                    className="capsule-card"
+                    onClick={() => setSelectedCapsule(capsule)}
+                  >
+                    <div className={`capsule-outfit-preview ${grid3 ? 'grid-3' : ''}`}>
+                      {preview.map((item, index) => (
+                        <div key={index} className="capsule-item-preview-overlay">
+                          {item.imageUrl && item.imageUrl !== 'null' && (
+                            <img 
+                              src={item.imageUrl} 
+                              alt={item.description}
+                              onError={(e) => {
+                                if (e.target.src.includes('.png')) {
+                                  e.target.src = e.target.src.replace('.png', '.jpg');
+                                }
+                              }}
+                            />
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    {moreCount > 0 && (
+                      <div className="capsule-more-badge">+{moreCount}</div>
+                    )}
+                    <div className="capsule-name">{capsule.name || 'Капсула'}</div>
+                  </div>
+                );
+              })}
             </div>
           </>
         ) : (

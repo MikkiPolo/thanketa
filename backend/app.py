@@ -1077,9 +1077,9 @@ def generate_capsules_with_gpt(wardrobe, profile, weather):
                             item_usage[iid] = max(0, item_usage.get(iid, 1) - 1)
                         continue
 
-                    # По возможности добавляем 1 аксессуар, если его нет и есть место (до 4 предметов)
+                    # По необходимости добавляем 1 аксессуар, если его нет
                     has_accessory = any(translate_category(wardrobe_dict.get(str(i), {}).get('category','')) == 'accessories' for i in valid_items)
-                    if not has_accessory and len(valid_items) < 4 and accessory_ids:
+                    if not has_accessory and accessory_ids:
                         add_acc = next((aid for aid in accessory_ids if aid not in valid_items), None)
                         if add_acc:
                             valid_items.append(add_acc)
