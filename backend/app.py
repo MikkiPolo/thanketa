@@ -916,7 +916,7 @@ def generate_capsules_with_gpt(wardrobe, profile, weather):
     {
       "id": "casual",
       "name": "Повседневный стиль",
-      "capsules": [
+      "fullCapsules": [
         {
           "id": "c1",
           "name": "Название",
@@ -1042,6 +1042,12 @@ def generate_capsules_with_gpt(wardrobe, profile, weather):
             raise Exception("Отсутствует поле 'categories' в ответе GPT")
         
         # 8. Проверяем и исправляем капсулы
+        # Приводим ответ к единому виду: переносим capsules -> fullCapsules при необходимости
+        if 'categories' in result:
+            for cat in result['categories']:
+                if 'fullCapsules' not in cat and 'capsules' in cat and isinstance(cat['capsules'], list):
+                    cat['fullCapsules'] = cat['capsules']
+        
         valid_ids = {item['id'] for item in filtered_wardrobe}
         print(f"Доступные ID вещей: {valid_ids}")
         
