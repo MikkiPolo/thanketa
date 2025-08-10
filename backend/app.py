@@ -674,6 +674,8 @@ def generate_capsules():
                 temp_c = float(temp_c)
             except Exception:
                 temp_c = 20.0
+            # Лимит 20 капсул и исключение уже показанных комбинаций (если пришли с фронта)
+            exclude_combos = data.get('exclude_combinations') or []
             capsules_core = rule_generate_capsules(
                 wardrobe_items=wardrobe,
                 season_hint=current_season,
@@ -686,7 +688,8 @@ def generate_capsules():
                 max_per_item=3,
                 acc_per_outfit=(1,2),
                 include_outerwear_below=18.0,
-                max_total=None
+                max_total=20,
+                exclude_combinations=exclude_combos
             )
             capsules_payload = { 'capsules': capsules_core, 'meta': { 'source': 'rule' } }
         else:

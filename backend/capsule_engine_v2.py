@@ -256,7 +256,8 @@ def generate_capsules(
     max_per_item: int = 3,
     acc_per_outfit: Tuple[int,int] = (1,2),
     include_outerwear_below: float = 18.0,
-    max_total: Optional[int] = None
+    max_total: Optional[int] = None,
+    exclude_combinations: Optional[List[List[str]]] = None
 ) -> Dict[str, Any]:
 
     target_style = normalize_style(predpochtenia)
@@ -282,6 +283,13 @@ def generate_capsules(
     if not shoes:
         return {"categories":[{"id":"casual","name":target_style,"capsules":[],"fullCapsules":[]}]} 
 
+    # Перемешиваем пулы для разнообразия на каждом запросе
+    random.shuffle(shoes)
+    random.shuffle(tops)
+    random.shuffle(bottoms)
+    random.shuffle(dresses)
+    random.shuffle(outer)
+
     shoes_q: Deque[Dict[str,Any]] = deque(shoes)
     tops_q: Deque[Dict[str,Any]] = deque(tops)
     bottoms_q: Deque[Dict[str,Any]] = deque(bottoms)
@@ -295,6 +303,15 @@ def generate_capsules(
 
     used_count: Dict[str,int] = defaultdict(int)
     produced: Set[Tuple[str,...]] = set()
+    # Инициализируем множеством уже показанных комбинаций, чтобы не повторяться
+    if exclude_combinations:
+        try:
+            for combo in exclude_combinations:
+                if isinstance(combo, list) and combo:
+                    key = tuple(sorted(str(i) for i in combo))
+                    produced.add(key)
+        except Exception:
+            pass
     out: List[Capsule] = []
 
     def can_take(item_id: str) -> bool:

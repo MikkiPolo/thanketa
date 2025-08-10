@@ -151,6 +151,8 @@ const CapsulePage = ({ profile, onBack, initialCapsule = null, isFavoritesView =
   const generateCapsules = async () => {
     try {
       setLoading(true);
+      // При обновлении скрываем текущие капсулы, чтобы не мигало и пользователь не видел старые
+      setCapsules(null);
       console.log('🔄 Начинаем генерацию капсул...');
       
       // Получаем гардероб пользователя
@@ -276,6 +278,11 @@ const CapsulePage = ({ profile, onBack, initialCapsule = null, isFavoritesView =
           is_suitable: it.is_suitable
         }));
 
+        // Передаём на бэкенд уже показанные комбинации, чтобы новые не повторяли старые
+        const excludeCombinations = Array.isArray(capsules)
+          ? capsules.map(c => (c.items || []).map(it => it.id))
+          : [];
+
       const response = await fetch(fullUrl, {
           method: 'POST',
           headers: {
@@ -289,7 +296,8 @@ const CapsulePage = ({ profile, onBack, initialCapsule = null, isFavoritesView =
             weather: weather,
             // Явно обходим кэш при ручном обновлении и принудительно включаем rule-engine
             no_cache: options.forceRefresh === true,
-            engine: 'rule'
+            engine: 'rule',
+            exclude_combinations: excludeCombinations
           }),
           signal: controller.signal
         });
