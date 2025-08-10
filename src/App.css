@@ -1500,7 +1500,6 @@ html {
   border: none !important;
   cursor: pointer;
   transition: all 0.2s ease;
-  aspect-ratio: auto !important;
   display: flex !important;
   flex-direction: column !important; /* название под превью */
   align-items: stretch !important;
@@ -1518,68 +1517,93 @@ html {
   background: rgba(0, 0, 0, 0.02);
 }
 
-.capsule-outfit-preview {
-  position: relative;
-  width: 100%;
-  background: transparent;
-  display: grid !important; /* всегда сетка для стабильности */
-  grid-template-columns: repeat(2, 1fr) !important;
-  grid-auto-rows: auto !important;
-  gap: 8px !important;
-  align-items: center !important;
-  justify-items: center !important;
+.capsule-canvas-preview {
+  position: relative !important;
+  width: 100% !important;
+  background: #fff !important; /* белый холст */
+  border-radius: 12px !important;
+  overflow: hidden !important;
+  aspect-ratio: 4 / 5 !important; /* стабильные пропорции */
 }
 
-.capsule-item-preview-overlay {
-  position: static !important; /* отключаем абсолютные позиции */
-  width: 100% !important;
-  aspect-ratio: 1 / 1 !important;
-  height: auto !important;
+.capsule-canvas-item {
+  position: absolute !important; /* раскладка по холсту */
+  width: 28% !important; /* базовая ширина предмета */
+  left: 50% !important;
+  top: 50% !important;
+  transform: translate(-50%, -50%) !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  background: #ffffff !important;
-  border-radius: 10px !important;
-  overflow: hidden !important;
-  transition: all 0.3s ease;
 }
 
 /* Позиционирование превью по индексу для избежания наложения */
 /* отключаем старое позиционирование превью */
-.capsule-item-preview-overlay:nth-child(1),
-.capsule-item-preview-overlay:nth-child(2),
-.capsule-item-preview-overlay:nth-child(3),
-.capsule-item-preview-overlay:nth-child(4) {
-  top: auto !important;
-  right: auto !important;
-  bottom: auto !important;
-  left: auto !important;
-  z-index: auto !important;
+.capsule-canvas-item[data-category="платье"],
+.capsule-canvas-item[data-category="dress"] {
+  width: 36% !important;
+  top: 28% !important;
+}
+.capsule-canvas-item[data-category="блузка"],
+.capsule-canvas-item[data-category="футболка"],
+.capsule-canvas-item[data-category="рубашка"],
+.capsule-canvas-item[data-category="свитер"],
+.capsule-canvas-item[data-category="топ"],
+.capsule-canvas-item[data-category="джемпер"],
+.capsule-canvas-item[data-category="кофта"],
+.capsule-canvas-item[data-category="водолазка"] {
+  top: 30% !important;
+}
+.capsule-canvas-item[data-category="брюки"],
+.capsule-canvas-item[data-category="джинсы"],
+.capsule-canvas-item[data-category="юбка"],
+.capsule-canvas-item[data-category="шорты"],
+.capsule-canvas-item[data-category="легинсы"],
+.capsule-canvas-item[data-category="леггинсы"] {
+  top: 55% !important;
+}
+.capsule-canvas-item[data-category="обувь"],
+.capsule-canvas-item[data-category="туфли"],
+.capsule-canvas-item[data-category="ботинки"],
+.capsule-canvas-item[data-category="кроссовки"],
+.capsule-canvas-item[data-category="сапоги"],
+.capsule-canvas-item[data-category="сандалии"],
+.capsule-canvas-item[data-category="мокасины"],
+.capsule-canvas-item[data-category="балетки"] {
+  width: 26% !important;
+  top: 78% !important;
+}
+.capsule-canvas-item[data-category="сумка"],
+.capsule-canvas-item[data-category="аксессуары"],
+.capsule-canvas-item[data-category="украшения"],
+.capsule-canvas-item[data-category="пояс"],
+.capsule-canvas-item[data-category="шарф"],
+.capsule-canvas-item[data-category="часы"],
+.capsule-canvas-item[data-category="очки"],
+.capsule-canvas-item[data-category="серьги"],
+.capsule-canvas-item[data-category="колье"],
+.capsule-canvas-item[data-category="браслет"],
+.capsule-canvas-item[data-category="рюкзак"] {
+  width: 22% !important;
+  left: 78% !important;
+  top: 42% !important;
 }
 
 /* Дополнительные позиции для большего количества предметов */
-.capsule-item-preview-overlay:nth-child(5),
-.capsule-item-preview-overlay:nth-child(6) {
-  top: auto !important;
-  right: auto !important;
-  bottom: auto !important;
-  left: auto !important;
-  transform: none !important;
-  z-index: auto !important;
+/* fallback для остальных — центр */
+.capsule-canvas-item:not([data-category]) {
+  top: 50% !important;
 }
 
-.capsule-item-preview-overlay img {
-  width: 90% !important;
-  height: 90% !important;
+.capsule-canvas-item img {
+  width: 100% !important;
+  height: auto !important;
   object-fit: contain !important;
   background: transparent !important;
 }
 
 /* 3-колоночное превью при большем количестве вещей */
-.capsule-outfit-preview.grid-3 {
-  grid-template-columns: repeat(3, 1fr) !important;
-  gap: 6px !important;
-}
+/* убрали grid-модификаторы */
 
 /* Название капсулы под превью */
 .capsule-name {

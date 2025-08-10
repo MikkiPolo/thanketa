@@ -893,16 +893,19 @@ const CapsulePage = ({ profile, onBack, initialCapsule = null, isFavoritesView =
               {capsules.map((capsule) => {
                 const preview = getPreviewItems(capsule.items || []);
                 const moreCount = (capsule.items?.length || 0) - preview.length;
-                const grid3 = preview.length > 4;
                 return (
                   <div 
                     key={capsule.id} 
                     className="capsule-card"
                     onClick={() => setSelectedCapsule(capsule)}
                   >
-                    <div className={`capsule-outfit-preview ${grid3 ? 'grid-3' : ''}`}>
+                    <div className="capsule-canvas-preview">
                       {preview.map((item, index) => (
-                        <div key={index} className="capsule-item-preview-overlay">
+                        <div 
+                          key={index} 
+                          className="capsule-canvas-item"
+                          data-category={item.category?.toLowerCase()}
+                        >
                           {item.imageUrl && item.imageUrl !== 'null' && (
                             <img 
                               src={item.imageUrl} 
