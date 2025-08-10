@@ -964,6 +964,16 @@ def generate_capsules_with_gpt(wardrobe, profile, weather):
         print("Генерируем капсулы через GPT-4o-mini...")
         prompt_length = len(system_prompt) + len(user_prompt)
         print(f"Длина промпта: {prompt_length} символов")
+        # Логируем полный SYSTEM/USER промпт (для отладки)
+        try:
+            print("=== SYSTEM PROMPT ===")
+            print(system_prompt)
+            print("=== END SYSTEM PROMPT ===")
+            print("=== USER PROMPT ===")
+            print(user_prompt)
+            print("=== END USER PROMPT ===")
+        except Exception as _lp_err:
+            print(f"⚠️ Не удалось вывести полный промпт: {_lp_err}")
         
         # 5. Отправляем запрос к GPT
         # Диагностика: выводим значения переменных, используемых в системном промпте
