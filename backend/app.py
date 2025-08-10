@@ -691,7 +691,11 @@ def generate_capsules():
                 max_total=20,
                 exclude_combinations=exclude_combos
             )
-            capsules_payload = { 'capsules': capsules_core, 'meta': { 'source': 'rule' } }
+            try:
+                total_caps = sum(len(cat.get('fullCapsules', [])) for cat in capsules_core.get('categories', []))
+            except Exception:
+                total_caps = 0
+            capsules_payload = { 'capsules': capsules_core, 'meta': { 'source': 'rule', 'total_capsules': total_caps, 'insufficient': total_caps == 0 } }
         else:
             # Generate capsules using GPT (без кэша)
             capsules_payload = generate_capsules_with_ai(wardrobe, profile, weather)

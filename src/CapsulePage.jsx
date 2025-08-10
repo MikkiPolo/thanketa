@@ -311,14 +311,16 @@ const CapsulePage = ({ profile, onBack, initialCapsule = null, isFavoritesView =
             alert('Недостаточно подходящих вещей для полноценных капсул. Добавьте или разблокируйте низы/обувь.');
           }
           
-          // Проверяем структуру ответа
+           // Проверяем структуру ответа
            if (!result.capsules || !result.capsules.categories) {
             console.error('Неверная структура ответа от бэкенда:', result);
             throw new Error('Неверная структура ответа от бэкенда');
           }
+           // Ограничиваем вывод максимум 20 капсул на клиенте (доп. гарантия)
+           const maxClientCaps = 20;
           
           // Преобразуем результат бэкенда в плоский список капсул без категорий
-          const flat = [];
+           const flat = [];
           (result.capsules.categories || []).forEach(category => {
             (category.fullCapsules || []).forEach(capsule => {
               const itemsResolved = sortItemsByCategory((capsule.items || []).map(itemId => {
@@ -337,7 +339,7 @@ const CapsulePage = ({ profile, onBack, initialCapsule = null, isFavoritesView =
               });
             });
           });
-          return flat;
+           return flat.slice(0, maxClientCaps);
         } else {
           console.error('Ошибка генерации капсул:', response.statusText);
           throw new Error(`Ошибка сервера: ${response.statusText}`);
