@@ -1528,10 +1528,9 @@ html {
 
 .capsule-canvas-item {
   position: absolute !important; /* раскладка по холсту */
-  width: 28% !important; /* базовая ширина предмета */
-  left: 50% !important;
-  top: 50% !important;
-  transform: translate(-50%, -50%) !important;
+  /* width, left и top задаются инлайн стилями из React (getPreviewPositions)
+     Удаляем принудительное центрирование, которое ломало раскладку превью */
+  /* базовую ширину не фиксируем — она приходит из style={{ width: `${p.width}%` }} */
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
