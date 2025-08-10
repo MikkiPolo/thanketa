@@ -17,16 +17,40 @@ class TelegramWebApp {
       this.webApp.expand();
       // применяем VisualViewport offsets для iOS клавиатуры
       try {
-        const applyViewportOffsets = () => {
+        const root = document.documentElement;
+        const tabbar = document.getElementById('tabbar');
+
+        const updateTabbarHeight = () => {
+          const h = tabbar ? Math.round(tabbar.getBoundingClientRect().height) : 0;
+          root.style.setProperty('--tabbar-h', `${h}px`);
+          recomputeBottomGap();
+        };
+
+        const updateVisualViewport = () => {
           const vv = window.visualViewport;
           if (!vv) return;
-          const occludedBottom = Math.max(0, (window.innerHeight - (vv.height + vv.offsetTop)));
-          document.documentElement.style.setProperty('--vv-bottom', `${occludedBottom}px`);
+          const occludedBottom = Math.max(0, window.innerHeight - (vv.height + vv.offsetTop));
+          root.style.setProperty('--vv-bottom', `${occludedBottom}px`);
+          recomputeBottomGap();
         };
+
+        const recomputeBottomGap = () => {
+          const styles = getComputedStyle(root);
+          const safe = parseFloat(styles.getPropertyValue('--safe')) || 0;
+          const tab = parseFloat(styles.getPropertyValue('--tabbar-h')) || 0;
+          const vvBot = parseFloat(styles.getPropertyValue('--vv-bottom')) || 0;
+          const gap = Math.max(tab + safe, vvBot);
+          root.style.setProperty('--bottom-gap', `${gap}px`);
+        };
+
+        // Инициализация наблюдателей
+        try { new ResizeObserver(updateTabbarHeight).observe(tabbar); } catch (e) {}
+        updateTabbarHeight();
+
         if (window.visualViewport) {
-          window.visualViewport.addEventListener('resize', applyViewportOffsets);
-          window.visualViewport.addEventListener('scroll', applyViewportOffsets);
-          applyViewportOffsets();
+          window.visualViewport.addEventListener('resize', updateVisualViewport);
+          window.visualViewport.addEventListener('scroll', updateVisualViewport);
+          updateVisualViewport();
         }
       } catch (e) { /* ignore */ }
       console.log('Telegram Web App инициализирован');

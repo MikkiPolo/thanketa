@@ -11,7 +11,7 @@ const BottomNavigation = ({ activePage, onPageChange }) => {
   ];
 
   return (
-    <div className="bottom-navigation">
+    <div className="bottom-navigation" id="tabbar">
       {navItems.map((item) => {
         const IconComponent = item.icon;
         const isActive = activePage === item.id;

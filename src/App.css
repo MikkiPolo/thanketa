@@ -32,6 +32,7 @@
   --tabbar-h: 80px;
   --safe: env(safe-area-inset-bottom, 0px);
   --vv-bottom: 0px;
+  --bottom-gap: calc(var(--tabbar-h) + var(--safe));
 }
 
 [data-theme="dark"] {
@@ -1062,7 +1063,7 @@ button.next:disabled {
   -webkit-overflow-scrolling: touch;
   height: auto;
   flex: 1 1 auto;
-  padding-bottom: calc(88px + var(--tabbar-h) + var(--safe)); /* место под фиксированный footer + таббар */
+  padding-bottom: calc(88px + var(--bottom-gap)); /* место под фиксированный footer + таббар/клава */
   overscroll-behavior: contain;
 }
 
@@ -1120,7 +1121,7 @@ button.next:disabled {
   position: fixed; /* фиксируем к вьюпорту */
   left: 0;
   right: 0;
-  bottom: calc(var(--tabbar-h) + var(--safe));
+  bottom: var(--bottom-gap);
   z-index: 10001; /* выше нижней навигации */
 }
 
