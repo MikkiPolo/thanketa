@@ -1539,61 +1539,7 @@ html {
 
 /* Позиционирование превью по индексу для избежания наложения */
 /* отключаем старое позиционирование превью */
-.capsule-canvas-item[data-category="платье"],
-.capsule-canvas-item[data-category="dress"] {
-  width: 36% !important;
-  top: 28% !important;
-}
-.capsule-canvas-item[data-category="блузка"],
-.capsule-canvas-item[data-category="футболка"],
-.capsule-canvas-item[data-category="рубашка"],
-.capsule-canvas-item[data-category="свитер"],
-.capsule-canvas-item[data-category="топ"],
-.capsule-canvas-item[data-category="джемпер"],
-.capsule-canvas-item[data-category="кофта"],
-.capsule-canvas-item[data-category="водолазка"] {
-  top: 30% !important;
-}
-.capsule-canvas-item[data-category="брюки"],
-.capsule-canvas-item[data-category="джинсы"],
-.capsule-canvas-item[data-category="юбка"],
-.capsule-canvas-item[data-category="шорты"],
-.capsule-canvas-item[data-category="легинсы"],
-.capsule-canvas-item[data-category="леггинсы"] {
-  top: 55% !important;
-}
-.capsule-canvas-item[data-category="обувь"],
-.capsule-canvas-item[data-category="туфли"],
-.capsule-canvas-item[data-category="ботинки"],
-.capsule-canvas-item[data-category="кроссовки"],
-.capsule-canvas-item[data-category="сапоги"],
-.capsule-canvas-item[data-category="сандалии"],
-.capsule-canvas-item[data-category="мокасины"],
-.capsule-canvas-item[data-category="балетки"] {
-  width: 26% !important;
-  top: 78% !important;
-}
-.capsule-canvas-item[data-category="сумка"],
-.capsule-canvas-item[data-category="аксессуары"],
-.capsule-canvas-item[data-category="украшения"],
-.capsule-canvas-item[data-category="пояс"],
-.capsule-canvas-item[data-category="шарф"],
-.capsule-canvas-item[data-category="часы"],
-.capsule-canvas-item[data-category="очки"],
-.capsule-canvas-item[data-category="серьги"],
-.capsule-canvas-item[data-category="колье"],
-.capsule-canvas-item[data-category="браслет"],
-.capsule-canvas-item[data-category="рюкзак"] {
-  width: 22% !important;
-  left: 78% !important;
-  top: 42% !important;
-}
-
-/* Дополнительные позиции для большего количества предметов */
-/* fallback для остальных — центр */
-.capsule-canvas-item:not([data-category]) {
-  top: 50% !important;
-}
+/* Удалены принудительные позиции по категории (мешали вычисленным координатам) */
 
 .capsule-canvas-item img {
   width: 100% !important;
