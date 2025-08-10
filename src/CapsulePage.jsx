@@ -296,7 +296,8 @@ const CapsulePage = ({ profile, onBack, initialCapsule = null, isFavoritesView =
             weather: weather,
             // Явно обходим кэш при ручном обновлении и принудительно включаем rule-engine
             no_cache: options.forceRefresh === true,
-            engine: 'rule',
+            engine: 'rule', // Принудительно используем rule-based движок
+            rule_engine: true, // Дополнительный флаг для rule-engine
             exclude_combinations: excludeCombinations
           }),
           signal: controller.signal

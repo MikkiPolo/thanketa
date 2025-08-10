@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тест подключения к Backend</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .success {
+            color: green;
+            font-weight: bold;
+        }
+        .error {
+            color: red;
+            font-weight: bold;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        pre {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 Тест подключения к Backend</h1>
+    
+    <div class="test-section">
+        <h2>1. Проверка Health Endpoint</h2>
+        <button onclick="testHealth()">Проверить /health</button>
+        <div id="health-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>2. Тест CORS</h2>
+        <button onclick="testCORS()">Проверить CORS</button>
+        <div id="cors-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>3. Тест загрузки изображения</h2>
+        <input type="file" id="test-image" accept="image/*" style="margin: 10px 0;">
+        <button onclick="testImageUpload()">Тестировать загрузку</button>
+        <div id="upload-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>4. Информация о подключении</h2>
+        <div id="connection-info"></div>
+    </div>
+
+    <script>
+        const BACKEND_URL = 'http://192.168.1.42:8081?v=' + Date.now();
+        
+        // Показываем информацию о подключении
+        document.getElementById('connection-info').innerHTML = `
+            <p><strong>Backend URL:</strong> ${BACKEND_URL}</p>
+            <p><strong>User Agent:</strong> ${navigator.userAgent}</p>
+            <p><strong>Platform:</strong> ${navigator.platform}</p>
+            <p><strong>Connection:</strong> ${navigator.connection ? navigator.connection.effectiveType : 'Неизвестно'}</p>
+        `;
+
+        async function testHealth() {
+            const resultDiv = document.getElementById('health-result');
+            resultDiv.innerHTML = '<p>Проверяем...</p>';
+            
+            try {
+                const response = await fetch(`${BACKEND_URL}/health`);
+                const data = await response.json();
+                
+                resultDiv.innerHTML = `
+                    <p class="success">✅ Подключение успешно!</p>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <p class="error">❌ Ошибка подключения: ${error.message}</p>
+                    <pre>${error.stack}</pre>
+                `;
+            }
+        }
+
+        async function testCORS() {
+            const resultDiv = document.getElementById('cors-result');
+            resultDiv.innerHTML = '<p>Проверяем CORS...</p>';
+            
+            try {
+                const response = await fetch(`${BACKEND_URL}/health`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                });
+                
+                resultDiv.innerHTML = `
+                    <p class="success">✅ CORS работает!</p>
+                    <p>Status: ${response.status}</p>
+                    <p>Headers: ${JSON.stringify(Object.fromEntries(response.headers.entries()), null, 2)}</p>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <p class="error">❌ CORS ошибка: ${error.message}</p>
+                    <pre>${error.stack}</pre>
+                `;
+            }
+        }
+
+        async function testImageUpload() {
+            const fileInput = document.getElementById('test-image');
+            const resultDiv = document.getElementById('upload-result');
+            
+            if (!fileInput.files[0]) {
+                resultDiv.innerHTML = '<p class="error">❌ Выберите изображение</p>';
+                return;
+            }
+            
+            resultDiv.innerHTML = '<p>Тестируем загрузку изображения...</p>';
+            
+            try {
+                const formData = new FormData();
+                formData.append('image', fileInput.files[0]);
+                formData.append('user_id', 'test_user');
+                
+                const response = await fetch(`${BACKEND_URL}/analyze-wardrobe-item`, {
+                    method: 'POST',
+                    body: formData,
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    resultDiv.innerHTML = `
+                        <p class="success">✅ Загрузка изображения успешна!</p>
+                        <p>Success: ${data.success}</p>
+                        <p>Has Image: ${!!data.image_base64}</p>
+                        <p>Has Analysis: ${!!data.analysis}</p>
+                    `;
+                } else {
+                    const errorText = await response.text();
+                    resultDiv.innerHTML = `
+                        <p class="error">❌ Ошибка загрузки: ${response.status}</p>
+                        <pre>${errorText}</pre>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <p class="error">❌ Ошибка: ${error.message}</p>
+                    <pre>${error.stack}</pre>
+                `;
+            }
+        }
+    </script>
+</body>
+</html> 
