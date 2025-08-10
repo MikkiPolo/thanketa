@@ -411,12 +411,12 @@ html, body {
   }
   
   .item-detail-actions {
-    bottom: var(--bottom-gap);
+    bottom: max(calc(var(--tabbar-h) + var(--safe)), var(--vv-bottom));
     position: fixed;
   }
   
   .item-detail-content {
-    padding-bottom: calc(88px + var(--bottom-gap));
+    padding-bottom: calc(88px + var(--tabbar-h) + var(--safe));
   }
 }
 
@@ -1063,7 +1063,7 @@ button.next:disabled {
   -webkit-overflow-scrolling: touch;
   height: auto;
   flex: 1 1 auto;
-  padding-bottom: calc(88px + var(--bottom-gap)); /* место под фиксированный footer + таббар/клава */
+  padding-bottom: calc(88px + var(--tabbar-h) + var(--safe)); /* запас под футер + таббар без клавиатуры */
   overscroll-behavior: contain;
 }
 
@@ -1121,7 +1121,7 @@ button.next:disabled {
   position: fixed; /* фиксируем к вьюпорту */
   left: 0;
   right: 0;
-  bottom: var(--bottom-gap);
+  bottom: max(calc(var(--tabbar-h) + var(--safe)), var(--vv-bottom));
   z-index: 10001; /* выше нижней навигации */
 }
 
