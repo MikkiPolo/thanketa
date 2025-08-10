@@ -318,21 +318,23 @@ export default function App() {
           }
           
           await profileService.saveProfile(dataToSave);
-          alert("Анкета сохранена!\n\nМожешь закрыть эту страницу.");
+          const inWebApp = telegramWebApp.isAvailable;
+          if (!inWebApp) {
+            alert("Анкета сохранена!\n\nМожешь закрыть эту страницу.");
+          }
 
           // Отправить сообщение с кнопками (локация / не отправлять)
-          const telegramBotToken = import.meta.env.VITE_TELEGRAM_BOT_TOKEN;
-          if (!telegramBotToken) {
-            console.warn('VITE_TELEGRAM_BOT_TOKEN не установлен');
-            return;
-          }
-          
-          await fetch(`https://api.telegram.org/bot${telegramBotToken}/sendMessage`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              chat_id: tgId,
-              text: `📍 Чтобы мои советы были по-настоящему полезными, важно знать, в каком климате ты живёшь.
+          try {
+            const telegramBotToken = import.meta.env.VITE_TELEGRAM_BOT_TOKEN;
+            if (!telegramBotToken) {
+              console.warn('VITE_TELEGRAM_BOT_TOKEN не установлен');
+            } else {
+              await fetch(`https://api.telegram.org/bot${telegramBotToken}/sendMessage`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  chat_id: tgId,
+                  text: `📍 Чтобы мои советы были по-настоящему полезными, важно знать, в каком климате ты живёшь.
 
 Это поможет учитывать сезон и подбирать одежду, которая будет комфортной в твоей погоде 🌦
 
@@ -341,18 +343,25 @@ export default function App() {
 📌 Не хочешь делиться локацией? Всё в порядке!
 
 👗 Если позже захочешь, чтобы я составила образы — пришли мне текущие погодные условия, и я подберу луки под них.`,
-              reply_markup: {
-                keyboard: [
-                  [
-                    { text: "📍 Отправить локацию", request_location: true },
-                    { text: "🚫 Не отправлять локацию" }
-                  ]
-                ],
-                resize_keyboard: true,
-                one_time_keyboard: true
-              }
-            })
-          });
+                  reply_markup: {
+                    keyboard: [
+                      [
+                        { text: "📍 Отправить локацию", request_location: true },
+                        { text: "🚫 Не отправлять локацию" }
+                      ]
+                    ],
+                    resize_keyboard: true,
+                    one_time_keyboard: true
+                  }
+                })
+              });
+            }
+          } catch (e) {
+            console.warn('Не удалось отправить сообщение в Telegram:', e);
+          }
+
+          // Внутри Telegram WebApp закрываем приложение автоматически
+          try { if (inWebApp) telegramWebApp.close(); } catch (_) {}
 
           setStarted(false);
           setExistingProfile({ name: form.name });
