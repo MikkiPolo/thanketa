@@ -4040,6 +4040,13 @@ html {
   transition: all 0.3s ease;
 }
 
+/* LookShelf */
+.look-shelf { display: flex; flex-direction: column; gap: 12px; }
+.look-title { font-weight: 700; font-size: 18px; line-height: 1.2; padding: 0 4px; text-transform: uppercase; }
+.look-canvas { width: 100%; background: #fff; border-radius: 12px; position: relative; overflow: hidden; }
+.look-stage { position: absolute; inset: 0; }
+.look-item { position: absolute; transform-origin: center; image-rendering: auto; }
+
 /* Улучшенная поддержка мобильных устройств */
 @media (max-width: 600px) {
   .app {

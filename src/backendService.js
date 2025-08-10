@@ -295,4 +295,20 @@ export const backendService = {
       throw error;
     }
   }
+  ,
+  async getLooks(looksRequest) {
+    try {
+      const url = `${BACKEND_URL}${API_ENDPOINTS.GET_LOOKS || '/looks'}`;
+      const resp = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(looksRequest || {})
+      });
+      if (!resp.ok) throw new Error(`HTTP error! status: ${resp.status}`);
+      return await resp.json();
+    } catch (e) {
+      console.error('Looks fetch failed:', e);
+      throw e;
+    }
+  }
 }; 

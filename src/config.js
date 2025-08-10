@@ -23,5 +23,6 @@ export const API_ENDPOINTS = {
   AI_FEEDBACK: '/ai-feedback',
   AI_PERFORMANCE: '/ai-performance',
   AI_EXPLANATION: '/ai-explanation',
-  WARDROBE_RECOMMENDATIONS: '/wardrobe-recommendations'
+  WARDROBE_RECOMMENDATIONS: '/wardrobe-recommendations',
+  GET_LOOKS: '/looks'
 };

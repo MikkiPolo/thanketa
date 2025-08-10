@@ -1492,5 +1492,118 @@ def get_category_name(category):
     }
     return category_names.get(category, category.capitalize())
 
+@app.route('/looks', methods=['POST'])
+def generate_looks():
+    """Возвращает один или несколько «луков» (композиций) для отрисовки на фронтенде.
+
+    Тело запроса: {
+      "name": "Название (опц)",
+      "items": [ { "id": "..", "src": "https://...png", "category": "Футболка" }, ... ]
+    }
+
+    Ответ: {
+      "looks": [
+        {
+          "id": "look_1",
+          "name": "Лук",
+          "canvas": { "ratio": 0.8 },
+          "items": [ { "id": "..", "src": "..", "x": 50, "y": 36, "w": 46, "z": 2, "r": 0 } ]
+        }
+      ]
+    }
+    """
+    try:
+        data = request.get_json(force=True) or {}
+        raw_items = data.get('items') or []
+        look_name = data.get('name') or 'Образ'
+
+        # Ключ кэша
+        cache_key = None
+        if _redis_client:
+            try:
+                cache_key_src = {
+                    'name': look_name,
+                    'items': [
+                        {
+                            'id': str(it.get('id')),
+                            'src': it.get('src')
+                        } for it in raw_items
+                    ]
+                }
+                h = hashlib.sha256(_json_for_cache.dumps(cache_key_src, ensure_ascii=False, sort_keys=True).encode('utf-8')).hexdigest()
+                cache_key = f"looks:{h}"
+                cached = _redis_client.get(cache_key)
+                if cached:
+                    return jsonify(json.loads(cached))
+            except Exception:
+                cache_key = None
+
+        # Нормализуем вход
+        items = []
+        for it in (raw_items or [])[:6]:
+            try:
+                items.append({
+                    'id': str(it.get('id')),
+                    'src': it.get('src') or '',
+                    'category': str(it.get('category') or ''),
+                })
+            except Exception:
+                continue
+
+        # Простейший расклад по слотам (в процентах). ratio = 4:5 (0.8)
+        slots = [
+            { 'x': 28, 'y': 35, 'w': 40, 'z': 2 },  # топ/платье
+            { 'x': 70, 'y': 60, 'w': 40, 'z': 2 },  # низ/outer
+            { 'x': 28, 'y': 75, 'w': 32, 'z': 3 },  # обувь
+            { 'x': 70, 'y': 28, 'w': 26, 'z': 3 },  # аксессуар
+            { 'x': 52, 'y': 50, 'w': 28, 'z': 1 },  # доп аксессуар
+            { 'x': 50, 'y': 82, 'w': 22, 'z': 1 },  # мелочь
+        ]
+
+        # Приоритезируем: dress -> top -> bottom -> shoes -> accessories -> outer -> rest
+        def cat(it):
+            c = (it.get('category') or '').lower()
+            if c in ['платье','dress','сарафан']: return 0
+            if c in ['блузка','футболка','рубашка','свитер','топ','джемпер','кофта','водолазка']: return 1
+            if c in ['юбка','брюки','джинсы','шорты','легинсы','леггинсы']: return 2
+            if c in ['обувь','туфли','ботинки','кроссовки','сапоги','сандалии','мокасины','балетки']: return 3
+            if c in ['сумка','аксессуары','украшения','пояс','шарф','часы','очки','серьги','колье','браслет','рюкзак']: return 4
+            if c in ['пиджак','куртка','пальто','кардиган','жакет','жилет']: return 5
+            return 6
+
+        items_sorted = sorted(items, key=cat)
+        placed = []
+        for i, it in enumerate(items_sorted[:len(slots)]):
+            slot = slots[i]
+            placed.append({
+                'id': it['id'],
+                'src': it['src'],
+                'x': slot['x'],
+                'y': slot['y'],
+                'w': slot['w'],
+                'z': slot['z'],
+                'r': 0
+            })
+
+        look = {
+            'id': 'look_1',
+            'name': look_name,
+            'canvas': { 'ratio': 0.8 },
+            'items': placed
+        }
+        resp = { 'looks': [look] }
+
+        if _redis_client and cache_key:
+            try:
+                ttl = getattr(Config, 'REDIS_TTL', 86400)
+                _redis_client.setex(cache_key, ttl, json.dumps(resp, ensure_ascii=False))
+            except Exception:
+                pass
+
+        return jsonify(resp)
+    except Exception as e:
+        print(f"❌ Ошибка формирования луков: {e}")
+        return jsonify({ 'looks': [] }), 200
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5001, debug=False) 
