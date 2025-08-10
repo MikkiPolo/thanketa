@@ -749,7 +749,7 @@ def generate_capsules_with_ai(wardrobe, profile, weather):
         meta_hint = result.get('meta_hint') if isinstance(result, dict) else None
         meta = {
             'total_capsules': total_caps,
-            'insufficient': total_caps < 6,
+            'insufficient': total_caps == 0,
             'source': (meta_hint or {}).get('source', 'gpt'),
             'reason': (meta_hint or {}).get('reason')
         }
@@ -770,7 +770,7 @@ def generate_capsules_with_ai(wardrobe, profile, weather):
             total_caps = 0
         meta = {
             'total_capsules': total_caps,
-            'insufficient': total_caps < 6,
+            'insufficient': total_caps == 0,
             'source': 'fallback',
             'reason': str(e)
         }

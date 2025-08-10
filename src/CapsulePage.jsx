@@ -308,7 +308,7 @@ const CapsulePage = ({ profile, onBack, initialCapsule = null, isFavoritesView =
           const result = await response.json();
           console.log('Ответ от бэкенда:', result);
           if (result?.meta?.insufficient) {
-            alert('Недостаточно подходящих вещей для полноценных капсул. Добавьте или разблокируйте низы/обувь.');
+            alert('Недостаточно подходящих вещей для создания капсул. Добавьте больше вещей в гардероб или разблокируйте существующие вещи.');
           }
           
            // Проверяем структуру ответа
