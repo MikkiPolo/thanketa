@@ -529,6 +529,16 @@ def analyze_wardrobe_item():
                 'success': False
             }), 400
         
+        # Уменьшаем изображение до разумного размера перед удалением фона
+        try:
+            max_side = 1024
+            w, h = image.size
+            if max(w, h) > max_side:
+                image = image.copy()
+                image.thumbnail((max_side, max_side))
+        except Exception:
+            pass
+
         # Удаляем фон (если доступно); иначе сохраняем как есть
         result_image = remove_bg(image)
         

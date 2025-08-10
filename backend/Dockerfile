@@ -12,4 +12,4 @@ COPY . /app
 
 EXPOSE 5001
 # Entrypoint: app module is at /app/app.py (context is ./backend)
-CMD ["gunicorn","-w","2","-b","0.0.0.0:5001","app:app"]
+CMD ["gunicorn","-w","2","-b","0.0.0.0:5001","--timeout","120","app:app"]
