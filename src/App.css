@@ -406,12 +406,12 @@ html, body {
   }
   
   .item-detail-actions {
-    bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+    bottom: 0;
     position: sticky;
   }
   
   .item-detail-content {
-    padding-bottom: calc(180px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(180px + 80px + env(safe-area-inset-bottom, 0px));
   }
 }
 
@@ -1112,7 +1112,7 @@ button.next:disabled {
   background: var(--card-bg);
   border-top: 1px solid var(--border-color);
   position: sticky; /* безопаснее в iOS WebView, чем fixed */
-  bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+  bottom: 0; /* прилипает к низу видимой области контента */
   z-index: 10001; /* выше нижней навигации */
 }
 
@@ -3138,7 +3138,7 @@ html {
 
 /* Adjust main content to account for bottom navigation */
 .app {
-  padding-bottom: calc(80px + env(safe-area-inset-bottom));
+  padding-bottom: calc(80px + env(safe-area-inset-bottom)); /* место для нижней навигации */
 }
 
 /* Mobile optimizations */
