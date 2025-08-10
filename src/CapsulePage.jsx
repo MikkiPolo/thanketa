@@ -406,6 +406,55 @@ const CapsulePage = ({ profile, onBack, initialCapsule = null, isFavoritesView =
     return picked;
   };
 
+  // Позиционирование предметов на белом холсте по шаблонам
+  const getPreviewPositions = (items) => {
+    if (!Array.isArray(items)) return [];
+    const toLower = (s) => (s || '').toLowerCase();
+    const findFirst = (arr, set) => arr.find((it) => set.has(toLower(it.category)));
+
+    const topSet = new Set(['блузка','футболка','рубашка','свитер','топ','джемпер','кофта','водолазка']);
+    const bottomSet = new Set(['юбка','брюки','джинсы','шорты','легинсы','леггинсы']);
+    const dressSet = new Set(['платье','сарафан']);
+    const shoesSet = new Set(['обувь','туфли','ботинки','кроссовки','сапоги','сандалии','мокасины','балетки']);
+    const accSet = new Set(['сумка','аксессуары','украшения','пояс','шарф','часы','очки','серьги','колье','браслет','рюкзак']);
+    const outerSet = new Set(['пиджак','куртка','пальто','кардиган','жакет','жилет']);
+
+    const itemsCopy = [...items];
+    const dress = findFirst(itemsCopy, dressSet);
+    const top = findFirst(itemsCopy, topSet);
+    const bottom = findFirst(itemsCopy, bottomSet);
+    const shoes = findFirst(itemsCopy, shoesSet);
+    const outer = findFirst(itemsCopy, outerSet);
+    const accessories = itemsCopy.filter((it) => accSet.has(toLower(it.category))).slice(0, 2);
+
+    const count = items.length;
+    const scale = count >= 5 ? 0.9 : 1.0;
+
+    const placements = [];
+
+    if (dress) {
+      placements.push({ item: dress, left: 50, top: 32, width: 42 * scale, z: 2 });
+      if (outer) placements.push({ item: outer, left: 24, top: 32, width: 28 * scale, z: 1 });
+      if (shoes) placements.push({ item: shoes, left: 50, top: 80, width: 26 * scale, z: 3 });
+      if (accessories[0]) placements.push({ item: accessories[0], left: 78, top: 42, width: 20 * scale, z: 4 });
+      if (accessories[1]) placements.push({ item: accessories[1], left: 22, top: 44, width: 18 * scale, z: 4 });
+    } else {
+      if (top) placements.push({ item: top, left: 50, top: 28, width: 34 * scale, z: 2 });
+      if (bottom) placements.push({ item: bottom, left: 50, top: 56, width: 34 * scale, z: 2 });
+      if (outer) placements.push({ item: outer, left: 22, top: 30, width: 26 * scale, z: 1 });
+      if (shoes) placements.push({ item: shoes, left: 50, top: 80, width: 26 * scale, z: 3 });
+      if (accessories[0]) placements.push({ item: accessories[0], left: 78, top: 40, width: 20 * scale, z: 4 });
+      if (accessories[1]) placements.push({ item: accessories[1], left: 22, top: 42, width: 18 * scale, z: 4 });
+    }
+
+    const placedIds = new Set(placements.map((p) => p.item.id));
+    const rest = items.filter((it) => !placedIds.has(it.id)).slice(0, 2);
+    if (rest[0]) placements.push({ item: rest[0], left: 30, top: 50, width: 22 * scale, z: 2 });
+    if (rest[1]) placements.push({ item: rest[1], left: 70, top: 50, width: 22 * scale, z: 2 });
+
+    return placements.sort((a, b) => (a.z || 1) - (b.z || 1));
+  };
+
 
 
   const handleAddToFavorites = async (capsule) => {
@@ -900,16 +949,17 @@ const CapsulePage = ({ profile, onBack, initialCapsule = null, isFavoritesView =
                     onClick={() => setSelectedCapsule(capsule)}
                   >
                     <div className="capsule-canvas-preview">
-                      {preview.map((item, index) => (
-                        <div 
-                          key={index} 
+                      {getPreviewPositions(preview).map((p, index) => (
+                        <div
+                          key={index}
                           className="capsule-canvas-item"
-                          data-category={item.category?.toLowerCase()}
+                          data-category={p.item.category?.toLowerCase()}
+                          style={{ left: `${p.left}%`, top: `${p.top}%`, width: `${p.width}%`, zIndex: p.z || 1 }}
                         >
-                          {item.imageUrl && item.imageUrl !== 'null' && (
-                            <img 
-                              src={item.imageUrl} 
-                              alt={item.description}
+                          {p.item.imageUrl && p.item.imageUrl !== 'null' && (
+                            <img
+                              src={p.item.imageUrl}
+                              alt={p.item.description}
                               onError={(e) => {
                                 if (e.target.src.includes('.png')) {
                                   e.target.src = e.target.src.replace('.png', '.jpg');
