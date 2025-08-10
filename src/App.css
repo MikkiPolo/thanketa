@@ -394,24 +394,24 @@ html, body {
 
 /* Специальные стили для карточки с детальным просмотром вещи */
 .card:has(.item-detail-content) {
-  height: 100vh;
-  overflow: visible; /* чтобы fixed блоки не обрезались в WebView */
+  height: 100dvh; /* устойчивее к iOS динамическим панелям */
+  overflow: hidden; /* исключаем влияние скролла на fixed */
   display: flex;
   flex-direction: column;
 }
 
 @media (max-width: 600px) {
   .card:has(.item-detail-content) {
-    height: calc(100vh - 80px);
+    height: calc(100dvh - 0px);
   }
   
   .item-detail-actions {
-    bottom: 0;
-    position: sticky;
+    bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+    position: fixed;
   }
   
   .item-detail-content {
-    padding-bottom: calc(180px + 80px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(200px + env(safe-area-inset-bottom, 0px));
   }
 }
 
@@ -1054,10 +1054,11 @@ button.next:disabled {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
-  overflow-y: auto;
-  height: calc(100vh - 200px);
-  padding-bottom: calc(160px + env(safe-area-inset-bottom, 0px)); /* запас под панель действий + нижнюю навигацию */
-  flex: 1;
+  overflow-y: auto; /* единственный скролл */
+  -webkit-overflow-scrolling: touch;
+  height: auto;
+  flex: 1 1 auto;
+  padding-bottom: calc(180px + env(safe-area-inset-bottom, 0px)); /* место под фиксированный footer */
 }
 
 .item-detail-image {
@@ -1111,8 +1112,10 @@ button.next:disabled {
   padding: 1rem;
   background: var(--card-bg);
   border-top: 1px solid var(--border-color);
-  position: sticky; /* безопаснее в iOS WebView, чем fixed */
-  bottom: 0; /* прилипает к низу видимой области контента */
+  position: fixed; /* фиксируем к вьюпорту */
+  left: 0;
+  right: 0;
+  bottom: calc(80px + env(safe-area-inset-bottom, 0px));
   z-index: 10001; /* выше нижней навигации */
 }
 
