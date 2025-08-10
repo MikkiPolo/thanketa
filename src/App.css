@@ -411,12 +411,12 @@ html, body {
   }
   
   .item-detail-actions {
-    bottom: calc(var(--tabbar-h) + var(--safe));
+    bottom: var(--bottom-gap);
     position: fixed;
   }
   
   .item-detail-content {
-    padding-bottom: calc(88px + var(--tabbar-h) + var(--safe));
+    padding-bottom: calc(88px + var(--bottom-gap));
   }
 }
 
@@ -3147,7 +3147,7 @@ html {
 
 /* Adjust main content to account for bottom navigation */
 .app {
-  padding-bottom: calc(80px + env(safe-area-inset-bottom)); /* место для нижней навигации */
+  padding-bottom: var(--bottom-gap); /* динамический зазор под таббар/клавиатуру */
 }
 
 /* Mobile optimizations */
