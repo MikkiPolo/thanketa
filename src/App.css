@@ -407,10 +407,11 @@ html, body {
   
   .item-detail-actions {
     bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+    position: sticky;
   }
   
   .item-detail-content {
-    padding-bottom: 140px;
+    padding-bottom: calc(180px + env(safe-area-inset-bottom, 0px));
   }
 }
 
@@ -1055,7 +1056,7 @@ button.next:disabled {
   gap: 1.5rem;
   overflow-y: auto;
   height: calc(100vh - 200px);
-  padding-bottom: 120px;
+  padding-bottom: calc(160px + env(safe-area-inset-bottom, 0px)); /* запас под панель действий + нижнюю навигацию */
   flex: 1;
 }
 
@@ -1110,11 +1111,9 @@ button.next:disabled {
   padding: 1rem;
   background: var(--card-bg);
   border-top: 1px solid var(--border-color);
-  position: fixed;
+  position: sticky; /* безопаснее в iOS WebView, чем fixed */
   bottom: calc(80px + env(safe-area-inset-bottom, 0px));
-  left: 0;
-  right: 0;
-  z-index: 10001;
+  z-index: 10001; /* выше нижней навигации */
 }
 
 /* Выравниваем размеры кнопок внизу карточки */
