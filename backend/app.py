@@ -900,10 +900,13 @@ def generate_capsules_with_gpt(wardrobe, profile, weather):
    - несколько курток/пиджаков одновременно
 3. Цвета: использовать только оттенки, подходящие для цветотипа клиента.
 4. Фигура: учитывать рекомендации по силуэтам и зонам, которые нужно подчеркнуть/скрыть.
-5. В каждой капсуле обязательно есть обувь из категории "Обувь".
-6. Не использовать вещи из списка запрещённых ID.
+ 5. В каждой капсуле обязательно есть обувь из категории "Обувь".
+ 6. Не использовать вещи из списка запрещённых ID.
  7. Создай как можно больше уникальных капсул (минимум 12, без верхней границы). Не дублируй идентичные комбинации.
-8. Одну и ту же вещь нельзя использовать более чем в 2 капсулах в рамках одного ответа.
+ 8. Аксессуары: в каждой капсуле добавляй ровно 1 аксессуар (серьги/ожерелье/браслет/платок) и по возможности 1 сумку из гардероба.
+ 9. Покрытие аксессуаров: постарайся использовать каждый доступный аксессуар хотя бы один раз во всём ответе. Если аксессуар стилистически не подходит — пропусти (исключение).
+ 10. Ограничение повторов: каждую вещь можно использовать не более 3 раз во всём ответе.
+ 11. Проверка валидности: платье не комбинируй с топом/низом; топ+низ обязательны, если нет платья.
 
 **Правила JSON:**
 - Всегда строго валидный JSON без markdown.
@@ -958,7 +961,7 @@ def generate_capsules_with_gpt(wardrobe, profile, weather):
 {unsuitable_ids_list}  
 
 **Задача:**  
-Создай 6–10 капсул, подходящих по цвету, фасону, образу жизни, фигуре и погоде.  
+Создай максимально возможное число уникальных капсул, подходящих по цвету, фасону, образу жизни, фигуре и погоде, без дубликатов.  
 '''
         
         print("Генерируем капсулы через GPT-4o-mini...")
@@ -1054,10 +1057,14 @@ def generate_capsules_with_gpt(wardrobe, profile, weather):
         wardrobe_dict = {str(item['id']): item for item in filtered_wardrobe}
         # Пулы по нормализованным категориям
         accessory_ids = [str(it['id']) for it in filtered_wardrobe if translate_category(it.get('category','')) == 'accessories']
+        bag_ids = [str(it['id']) for it in filtered_wardrobe if (it.get('category','').lower() in ['сумка','bag'])]
         shoe_ids = [str(it['id']) for it in filtered_wardrobe if translate_category(it.get('category','')) == 'shoes']
 
-                # Лимит на повторное использование одной вещи: не более 2 раз на подборку
+        # Лимит на повторное использование одной вещи: не более 3 раз на подборку
+        MAX_PER_ITEM = 3
         item_usage = {}
+        # Круговое распределение аксессуаров
+        acc_index = 0
         excluded_ids_for_fix = compute_unsuitable_ids(profile, filtered_wardrobe)
         for category in result['categories']:
             if 'fullCapsules' not in category:
@@ -1097,7 +1104,7 @@ def generate_capsules_with_gpt(wardrobe, profile, weather):
                     too_much = False
                     for iid in valid_items:
                         item_usage[iid] = item_usage.get(iid, 0) + 1
-                        if item_usage[iid] > 2:
+                        if item_usage[iid] > MAX_PER_ITEM:
                             too_much = True
                     if too_much:
                         print(f"Капсула {capsule.get('id', 'unknown')} отклонена: превышен лимит использования вещей")
@@ -1117,13 +1124,27 @@ def generate_capsules_with_gpt(wardrobe, profile, weather):
                             item_usage[iid] = max(0, item_usage.get(iid, 1) - 1)
                         continue
 
-                    # По необходимости добавляем 1 аксессуар, если его нет
+                    # По необходимости добавляем 1 аксессуар и по возможности 1 сумку (round-robin)
                     has_accessory = any(translate_category(wardrobe_dict.get(str(i), {}).get('category','')) == 'accessories' for i in valid_items)
                     if not has_accessory and accessory_ids:
-                        add_acc = next((aid for aid in accessory_ids if aid not in valid_items), None)
+                        # round-robin
+                        add_acc = None
+                        for _ in range(len(accessory_ids)):
+                            candidate = accessory_ids[acc_index % len(accessory_ids)]
+                            acc_index += 1
+                            if candidate not in valid_items and item_usage.get(candidate, 0) < MAX_PER_ITEM:
+                                add_acc = candidate
+                                break
                         if add_acc:
                             valid_items.append(add_acc)
                             item_usage[add_acc] = item_usage.get(add_acc, 0) + 1
+                    # Сумка по возможности
+                    has_bag = any((wardrobe_dict.get(str(i), {}).get('category','').lower() in ['сумка','bag']) for i in valid_items)
+                    if not has_bag and bag_ids:
+                        add_bag = next((bid for bid in bag_ids if bid not in valid_items and item_usage.get(bid,0) < MAX_PER_ITEM), None)
+                        if add_bag:
+                            valid_items.append(add_bag)
+                            item_usage[add_bag] = item_usage.get(add_bag, 0) + 1
                     capsule['items'] = valid_items
                     valid_capsules.append(capsule)
                 else:
