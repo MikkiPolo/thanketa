@@ -15,102 +15,73 @@ const ProfilePage = ({ telegramId }) => {
   }, [telegramId]);
 
   const applyWebModeStyles = () => {
-    // Определяем, запущено ли приложение в Telegram WebApp
-    const isTelegramWebApp = telegramWebApp.isAvailable;
-    
-    if (!isTelegramWebApp) {
-      // Если это обычный веб-режим, добавляем специальные стили
-      const profileContent = document.querySelector('.profile-content');
-      if (profileContent) {
-        profileContent.style.paddingBottom = 'calc(env(safe-area-inset-bottom) + 25rem)';
-        profileContent.style.maxHeight = 'calc(100vh - 120px)';
-      }
-      
-      const card = document.querySelector('.card');
-      if (card) {
-        card.style.paddingBottom = 'calc(env(safe-area-inset-bottom) + 4rem)';
-      }
-      
-      // Добавляем обработчик для клавиатуры
-      const handleResize = () => {
-        const bottomNav = document.querySelector(".bottom-navigation");
-        const app = document.querySelector(".app");
-        const isKeyboardOpen = window.innerHeight < window.outerHeight * 0.8 || window.innerHeight < 600 || window.innerHeight < window.screen.height * 0.7;
-        
-        console.log('Window height:', window.innerHeight, 'Outer height:', window.outerHeight, 'Keyboard open:', isKeyboardOpen);
-        
-        if (isKeyboardOpen) {
-          console.log('Hiding navigation and adjusting padding');
-          if (bottomNav) {
-            bottomNav.style.display = "none";
-            console.log('Navigation hidden');
-          }
-          if (app) app.style.paddingBottom = "0";
-          if (profileContent) {
-            profileContent.style.paddingBottom = 'calc(env(safe-area-inset-bottom) + 35rem)';
-            profileContent.style.maxHeight = 'calc(100vh - 60px)';
-          }
-          if (card) {
-            card.style.paddingBottom = 'calc(env(safe-area-inset-bottom) + 8rem)';
-          }
-        } else {
-          console.log('Showing navigation and normal padding');
-          if (bottomNav) {
-            bottomNav.style.display = "flex";
-            console.log('Navigation shown');
-          }
-          if (app) app.style.paddingBottom = "";
-          if (profileContent) {
-            profileContent.style.paddingBottom = 'calc(env(safe-area-inset-bottom) + 25rem)';
-            profileContent.style.maxHeight = 'calc(100vh - 120px)';
-          }
-          if (card) {
-            card.style.paddingBottom = 'calc(env(safe-area-inset-bottom) + 4rem)';
-          }
+    const profileContent = document.querySelector('.profile-content');
+    const card = document.querySelector('.card');
+
+    const applyKeyboardLayout = () => {
+      const vv = window.visualViewport;
+      const viewportHeight = vv ? vv.height : window.innerHeight;
+      const fullHeight = window.innerHeight;
+      const keyboardPx = Math.max(0, fullHeight - viewportHeight);
+      const isKeyboardOpen = keyboardPx > 120; // эвристика
+
+      const bottomNav = document.querySelector('.bottom-navigation');
+      if (isKeyboardOpen) {
+        if (bottomNav) bottomNav.style.display = 'none';
+        if (profileContent) {
+          const extra = Math.min(320, keyboardPx + 80);
+          profileContent.style.paddingBottom = `${extra}px`;
+          profileContent.style.maxHeight = 'unset';
         }
-      };
-      
-      window.addEventListener('resize', handleResize);
-      
-      // Добавляем обработчики для input полей
-      const inputs = document.querySelectorAll("input, select, textarea");
-      inputs.forEach(input => {
-        input.addEventListener("focus", () => {
-          console.log('Input focused, hiding navigation');
-          const bottomNav = document.querySelector(".bottom-navigation");
-          if (bottomNav) {
-            bottomNav.style.display = "none";
-            console.log('Navigation hidden on focus');
-          }
-          // Автоматическая прокрутка к полю
-          setTimeout(() => {
-            input.scrollIntoView({ 
-              behavior: 'smooth', 
-              block: 'center',
-              inline: 'nearest'
-            });
-          }, 300);
-          // Принудительно вызываем handleResize
-          setTimeout(() => handleResize(), 100);
-        });
-        input.addEventListener("blur", () => {
-          console.log('Input blurred, showing navigation');
-          const bottomNav = document.querySelector(".bottom-navigation");
-          if (bottomNav) {
-            bottomNav.style.display = "flex";
-            console.log('Navigation shown on blur');
-          }
-          // Принудительно вызываем handleResize
-          setTimeout(() => handleResize(), 100);
-        });
-      });
-      
-      // Вызываем сразу для определения текущего состояния
-      handleResize();
-      
-      // Очистка при размонтировании
-      return () => window.removeEventListener('resize', handleResize);
+        if (card) {
+          const extra = Math.min(240, keyboardPx + 40);
+          card.style.paddingBottom = `${extra}px`;
+        }
+      } else {
+        if (bottomNav) bottomNav.style.display = 'flex';
+        if (profileContent) {
+          profileContent.style.paddingBottom = 'calc(env(safe-area-inset-bottom) + 4rem)';
+          profileContent.style.maxHeight = '';
+        }
+        if (card) {
+          card.style.paddingBottom = 'calc(env(safe-area-inset-bottom) + 4rem)';
+        }
+      }
+    };
+
+    // Начальные значения
+    if (profileContent) profileContent.style.paddingBottom = 'calc(env(safe-area-inset-bottom) + 4rem)';
+    if (card) card.style.paddingBottom = 'calc(env(safe-area-inset-bottom) + 4rem)';
+
+    // Слушатели для visualViewport и resize
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', applyKeyboardLayout);
+      window.visualViewport.addEventListener('scroll', applyKeyboardLayout);
     }
+    window.addEventListener('resize', applyKeyboardLayout);
+
+    // Скрытие/показ навигации при фокусе
+    const inputs = document.querySelectorAll('input, select, textarea');
+    inputs.forEach((input) => {
+      input.addEventListener('focus', applyKeyboardLayout);
+      input.addEventListener('blur', applyKeyboardLayout);
+    });
+
+    // Первичный расчет
+    applyKeyboardLayout();
+
+    // Очистка
+    return () => {
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener('resize', applyKeyboardLayout);
+        window.visualViewport.removeEventListener('scroll', applyKeyboardLayout);
+      }
+      window.removeEventListener('resize', applyKeyboardLayout);
+      inputs.forEach((input) => {
+        input.removeEventListener('focus', applyKeyboardLayout);
+        input.removeEventListener('blur', applyKeyboardLayout);
+      });
+    };
   };
 
   const loadProfile = async () => {
@@ -118,7 +89,7 @@ const ProfilePage = ({ telegramId }) => {
       setLoading(false);
       return;
     }
-    
+
     try {
       setLoading(true);
       const { data, error } = await supabase
@@ -147,7 +118,7 @@ const ProfilePage = ({ telegramId }) => {
       console.error('No valid telegram ID for saving profile');
       return;
     }
-    
+
     try {
       const { error } = await supabase
         .from('user_profile')
@@ -163,12 +134,8 @@ const ProfilePage = ({ telegramId }) => {
 
       setProfile(formData);
       setEditing(false);
-      // Показываем навигацию при сохранении
-      const bottomNav = document.querySelector(".bottom-navigation");
-      if (bottomNav && !telegramWebApp.isAvailable) {
-        bottomNav.style.display = "flex";
-        console.log('Navigation shown on save');
-      }
+      const bottomNav = document.querySelector('.bottom-navigation');
+      if (bottomNav) bottomNav.style.display = 'flex';
     } catch (error) {
       console.error('Error saving profile:', error);
     }
@@ -177,22 +144,18 @@ const ProfilePage = ({ telegramId }) => {
   const handleCancel = () => {
     setFormData(profile || {});
     setEditing(false);
-    // Показываем навигацию при выходе из режима редактирования
-    const bottomNav = document.querySelector(".bottom-navigation");
-    if (bottomNav && !telegramWebApp.isAvailable) {
-      bottomNav.style.display = "flex";
-      console.log('Navigation shown on cancel edit');
-    }
+    const bottomNav = document.querySelector('.bottom-navigation');
+    if (bottomNav) bottomNav.style.display = 'flex';
   };
 
   const handleInputChange = (field, value) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   if (loading) {
     return (
       <div className="app">
-        <div className="card" style={{ paddingTop: "calc(env(safe-area-inset-top) + 4rem)" }}>
+        <div className="card" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 4rem)' }}>
           <div className="loading-text">Загрузка профиля...</div>
         </div>
       </div>
@@ -201,7 +164,7 @@ const ProfilePage = ({ telegramId }) => {
 
   return (
     <div className="app">
-      <div className="card" style={{ paddingTop: "calc(env(safe-area-inset-top) + 4rem)" }}>
+      <div className="card" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 4rem)' }}>
         <div className="profile-header">
           <h2>Профиль</h2>
           <User size={24} className="profile-icon" />
@@ -211,16 +174,12 @@ const ProfilePage = ({ telegramId }) => {
           <div className="profile-actions">
             {!editing ? (
               <div className="flex space-x-2">
-                <button 
+                <button
                   className="btn-primary"
                   onClick={() => {
                     setEditing(true);
-                    // Скрываем навигацию при входе в режим редактирования
-                    const bottomNav = document.querySelector(".bottom-navigation");
-                    if (bottomNav && !telegramWebApp.isAvailable) {
-                      bottomNav.style.display = "none";
-                      console.log('Navigation hidden on edit mode');
-                    }
+                    const bottomNav = document.querySelector('.bottom-navigation');
+                    if (bottomNav) bottomNav.style.display = 'none';
                   }}
                 >
                   Редактировать
@@ -228,17 +187,11 @@ const ProfilePage = ({ telegramId }) => {
               </div>
             ) : (
               <div className="edit-actions">
-                <button 
-                  className="save-profile-btn"
-                  onClick={handleSave}
-                >
+                <button className="btn-primary" onClick={handleSave}>
                   <Save size={16} />
                   Сохранить
                 </button>
-                <button 
-                  className="cancel-edit-btn"
-                  onClick={handleCancel}
-                >
+                <button className="btn-secondary" onClick={handleCancel}>
                   <X size={16} />
                   Отмена
                 </button>
@@ -280,38 +233,44 @@ const ProfilePage = ({ telegramId }) => {
             <div className="profile-field">
               <label>Цветотип:</label>
               {editing ? (
-                <select
+                <input
+                  type="text"
                   value={formData.cvetotip || ''}
                   onChange={(e) => handleInputChange('cvetotip', e.target.value)}
-                >
-                  <option value="">Выберите цветотип</option>
-                  <option value="весна">Весна</option>
-                  <option value="лето">Лето</option>
-                  <option value="осень">Осень</option>
-                  <option value="зима">Зима</option>
-                </select>
+                  placeholder="Например: тёплая осень, холодное лето"
+                  list="cvetotip-hints"
+                />
               ) : (
                 <span className="profile-value">{profile?.cvetotip || 'Не указано'}</span>
               )}
+              <datalist id="cvetotip-hints">
+                <option value="тёплая осень" />
+                <option value="светлая весна" />
+                <option value="холодное лето" />
+                <option value="яркая зима" />
+              </datalist>
             </div>
 
             <div className="profile-field">
               <label>Тип фигуры:</label>
               {editing ? (
-                <select
+                <input
+                  type="text"
                   value={formData.figura || ''}
                   onChange={(e) => handleInputChange('figura', e.target.value)}
-                >
-                  <option value="">Выберите тип фигуры</option>
-                  <option value="песочные часы">Песочные часы</option>
-                  <option value="прямоугольник">Прямоугольник</option>
-                  <option value="треугольник">Треугольник</option>
-                  <option value="перевернутый треугольник">Перевернутый треугольник</option>
-                  <option value="овал">Овал</option>
-                </select>
+                  placeholder="Например: песочные часы, прямоугольник"
+                  list="figura-hints"
+                />
               ) : (
                 <span className="profile-value">{profile?.figura || 'Не указано'}</span>
               )}
+              <datalist id="figura-hints">
+                <option value="песочные часы" />
+                <option value="прямоугольник" />
+                <option value="треугольник" />
+                <option value="перевернутый треугольник" />
+                <option value="овал" />
+              </datalist>
             </div>
 
             <div className="profile-field">
