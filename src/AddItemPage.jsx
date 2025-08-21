@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { backendService } from './backendService';
 import { wardrobeService } from './supabase';
 import LoadingModal from './LoadingModal';
-import { ArrowLeft, Camera, Image } from 'lucide-react';
+import { Image } from 'lucide-react';
 
 const AddItemPage = ({ telegramId, onItemAdded, onClose }) => {
   // Функция для нормализации текста (первая буква заглавная, остальные строчные)
@@ -40,7 +40,7 @@ const AddItemPage = ({ telegramId, onItemAdded, onClose }) => {
     });
   };
 
-  const [step, setStep] = useState('select'); // select, camera, processing, edit, saving
+  const [step, setStep] = useState('select'); // select, processing, edit, saving
   const [imageFile, setImageFile] = useState(null);
   const [processedImage, setProcessedImage] = useState(null);
   const [analysis, setAnalysis] = useState(null);
@@ -54,53 +54,6 @@ const AddItemPage = ({ telegramId, onItemAdded, onClose }) => {
   const [error, setError] = useState(null);
   
   const fileInputRef = useRef(null);
-  const videoRef = useRef(null);
-  const canvasRef = useRef(null);
-  const streamRef = useRef(null);
-
-  // Запуск камеры
-  const startCamera = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: 'environment' } 
-      });
-      streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-      }
-    } catch (error) {
-      console.error('Camera access denied:', error);
-      setError('Не удалось получить доступ к камере');
-    }
-  };
-
-  // Остановка камеры
-  const stopCamera = () => {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
-      streamRef.current = null;
-    }
-  };
-
-  // Сделать снимок
-  const takePhoto = () => {
-    if (videoRef.current && canvasRef.current) {
-      const canvas = canvasRef.current;
-      const video = videoRef.current;
-      const context = canvas.getContext('2d');
-      
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      context.drawImage(video, 0, 0);
-      
-      canvas.toBlob((blob) => {
-        const file = new File([blob], 'photo.jpg', { type: 'image/jpeg' });
-        setImageFile(file);
-        setStep('processing');
-        processImage(file);
-      }, 'image/jpeg');
-    }
-  };
 
   // Выбрать файл из галереи
   const selectFromGallery = (event) => {
@@ -116,7 +69,7 @@ const AddItemPage = ({ telegramId, onItemAdded, onClose }) => {
   const processImage = async (file) => {
     setShowLoadingModal(true);
     setError(null);
-    
+
     try {
       // Анализируем изображение с AI
       const result = await backendService.analyzeWardrobeItem(file);
@@ -124,14 +77,17 @@ const AddItemPage = ({ telegramId, onItemAdded, onClose }) => {
       if (result.success) {
         setProcessedImage(result.image_base64);
         setAnalysis(result.analysis);
+        
+        // Заполняем форму данными из AI анализа
         setFormData({
-          category: normalizeText(result.analysis.category),
-          season: normalizeText(result.analysis.season),
-          description: normalizeText(result.analysis.description)
+          category: normalizeText(result.analysis.category || ''),
+          season: normalizeText(result.analysis.season || ''),
+          description: normalizeText(result.analysis.description || '')
         });
+        
         setStep('edit');
       } else {
-        setError(result.error || 'Ошибка анализа изображения');
+        setError('Ошибка анализа изображения');
         setStep('select');
       }
     } catch (error) {
@@ -203,7 +159,6 @@ const AddItemPage = ({ telegramId, onItemAdded, onClose }) => {
   };
 
   const handleClose = () => {
-    stopCamera();
     setStep('select');
     setImageFile(null);
     setProcessedImage(null);
@@ -219,36 +174,13 @@ const AddItemPage = ({ telegramId, onItemAdded, onClose }) => {
   if (step === 'select') {
     return (
       <>
-        <div className="add-item-content">
-          <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-            <h2 style={{ margin: 0, color: 'var(--color-text-primary)', fontSize: '1.4rem', marginBottom: '1rem' }}>
-              Добавить вещь
-            </h2>
-            <p style={{ color: 'var(--color-text-light)', margin: 0 }}>
-              Выберите способ добавления вещи в гардероб
-            </p>
-          </div>
-          
-          <div className="add-item-options">
-            <button 
-              className="add-option-btn camera-option"
-              onClick={() => {
-                setStep('camera');
-                setTimeout(startCamera, 100);
-              }}
-            >
-              <Camera size={32} />
-              <span>Сделать фото</span>
-            </button>
-            
-            <button 
-              className="add-option-btn gallery-option"
-              onClick={() => fileInputRef.current?.click()}
-            >
-              <Image size={32} />
-              <span>Выбрать из галереи</span>
-            </button>
-          </div>
+        <div className="add-item-content" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <button 
+            className="btn-primary"
+            onClick={() => fileInputRef.current?.click()}
+          >
+            Добавить фото
+          </button>
           
           <input
             ref={fileInputRef}
@@ -275,122 +207,73 @@ const AddItemPage = ({ telegramId, onItemAdded, onClose }) => {
     );
   }
 
-  // Рендер шага камеры
-  if (step === 'camera') {
-    return (
-      <>
-        <div className="add-item-content">
-          <h2 style={{ textAlign: 'center', marginBottom: '1.5rem', color: 'var(--color-text-primary)' }}>
-            Сделать фото
-          </h2>
-          
-          <div className="camera-step">
-            <div className="camera-container">
-              <video
-                ref={videoRef}
-                autoPlay
-                playsInline
-                style={{ width: '100%', height: '300px', objectFit: 'cover', borderRadius: '8px' }}
-              />
-              <canvas ref={canvasRef} style={{ display: 'none' }} />
-            </div>
-            
-            <div className="camera-controls">
-              <button className="btn-secondary" onClick={handleClose}>
-                Отмена
-              </button>
-              <button className="btn-primary" onClick={takePhoto}>
-                Сделать фото
-              </button>
-            </div>
-          </div>
-        </div>
-        
-        {/* Модальное окно загрузки */}
-        <LoadingModal 
-          isVisible={showLoadingModal}
-          title="Анализируем изображение"
-          subtitle="AI определяет категорию, сезон и описание вещи"
-        />
-      </>
-    );
-  }
-
   // Рендер шага редактирования
   if (step === 'edit') {
     return (
       <>
         <div className="add-item-content">
           <h2 style={{ textAlign: 'center', marginBottom: '1.5rem', color: 'var(--color-text-primary)' }}>
-            Редактировать вещь
+            Редактировать информацию
           </h2>
+          
+          <div className="image-preview" style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+            <img 
+              src={`data:image/png;base64,${processedImage}`} 
+              alt="Preview" 
+              style={{ 
+                maxWidth: '200px', 
+                maxHeight: '200px', 
+                borderRadius: '8px',
+                backgroundColor: 'transparent'
+              }}
+            />
+          </div>
+          
+          <div className="form-fields">
+            <div className="form-group">
+              <label>Категория:</label>
+              <input
+                type="text"
+                value={formData.category}
+                onChange={(e) => handleInputChange('category', e.target.value)}
+                placeholder="Например: Платье, Брюки, Блузка"
+              />
+            </div>
             
-            <div className="edit-step">
-              <div className="image-preview" style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
-                <img 
-                  src={`data:image/png;base64,${processedImage}`} 
-                  alt="Обработанное изображение"
-                  style={{ 
-                    maxWidth: '200px', 
-                    maxHeight: '200px',
-                    borderRadius: '8px',
-                    boxShadow: '0 2px 8px var(--shadow)'
-                  }}
-                />
-              </div>
-              
-              <div className="form-fields">
-                <div className="form-group">
-                  <label>Категория:</label>
-                  <input
-                    type="text"
-                    value={formData.category}
-                    onChange={(e) => handleInputChange('category', e.target.value)}
-                    placeholder="Например: платье, рубашка, брюки"
-                  />
-                </div>
-                
-                <div className="form-group">
-                  <label>Сезон:</label>
-                  <input
-                    type="text"
-                    value={formData.season}
-                    onChange={(e) => handleInputChange('season', e.target.value)}
-                    placeholder="Например: лето, зима, демисезон"
-                  />
-                </div>
-                
-                <div className="form-group">
-                  <label>Описание:</label>
-                  <input
-                    type="text"
-                    value={formData.description}
-                    onChange={(e) => handleInputChange('description', e.target.value)}
-                    placeholder="Краткое описание вещи"
-                  />
-                </div>
-              </div>
-              
-              <div className="form-actions">
-                <button className="btn-secondary" onClick={handleClose}>
-                  Отмена
-                </button>
-                <button 
-                  className="btn-primary" 
-                  onClick={saveItem}
-                  disabled={loading}
-                >
-                  {loading ? 'Сохранение...' : 'Сохранить'}
-                </button>
-              </div>
-              
-              {error && (
-                <div className="error-message">
-                  {error}
-                </div>
-              )}
+            <div className="form-group">
+              <label>Сезон:</label>
+              <input
+                type="text"
+                value={formData.season}
+                onChange={(e) => handleInputChange('season', e.target.value)}
+                placeholder="Например: Лето, Зима, Всесезонное"
+              />
+            </div>
+            
+            <div className="form-group">
+              <label>Описание:</label>
+              <textarea
+                value={formData.description}
+                onChange={(e) => handleInputChange('description', e.target.value)}
+                placeholder="Например: Черное платье миди длины"
+                rows={3}
+              />
             </div>
           </div>
+          
+          <div className="form-actions">
+            <button className="btn-secondary" onClick={handleClose}>
+              Отмена
+            </button>
+            <button 
+              className="btn-primary" 
+              onClick={saveItem}
+              disabled={loading}
+            >
+              {loading ? 'Сохранение...' : 'Сохранить'}
+            </button>
+          </div>
+        </div>
         
         {/* Модальное окно загрузки */}
         <LoadingModal 

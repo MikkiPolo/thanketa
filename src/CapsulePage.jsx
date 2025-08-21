@@ -558,7 +558,19 @@ const CapsulePage = ({ profile, onBack, initialCapsule = null, isFavoritesView =
   };
 
   const isInFavorites = (capsuleId) => {
-    return favorites.some(fav => fav.id === capsuleId);
+    // Находим текущую капсулу по ID
+    const currentCapsule = capsules?.find(cap => cap.id === capsuleId);
+    if (!currentCapsule || !currentCapsule.items) return false;
+    
+    // Создаем отсортированный массив ID вещей текущей капсулы
+    const currentItems = currentCapsule.items.map(item => item.id).sort();
+    
+    // Проверяем, есть ли в избранном капсула с таким же содержимым
+    return favorites.some(fav => {
+      if (!fav.items) return false;
+      const favItems = fav.items.map(item => item.id).sort();
+      return JSON.stringify(currentItems) === JSON.stringify(favItems);
+    });
   };
 
   // Функция для генерации изображения капсулы

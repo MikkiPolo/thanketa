@@ -1,7 +1,7 @@
 import React from 'react';
-import { Camera, Image, X } from 'lucide-react';
+import { Image, X } from 'lucide-react';
 
-const AddItemModal = ({ isOpen, onClose, onSelectCamera, onSelectGallery }) => {
+const AddItemModal = ({ isOpen, onClose, onSelectGallery }) => {
   if (!isOpen) return null;
 
   return (
@@ -16,19 +16,11 @@ const AddItemModal = ({ isOpen, onClose, onSelectCamera, onSelectGallery }) => {
         
         <div className="add-item-options">
           <button 
-            className="add-option-btn camera-option"
-            onClick={onSelectCamera}
-          >
-            <Camera size={32} />
-            <span>Сделать фото</span>
-          </button>
-          
-          <button 
             className="add-option-btn gallery-option"
             onClick={onSelectGallery}
           >
             <Image size={32} />
-            <span>Выбрать из галереи</span>
+            <span>Добавить фото</span>
           </button>
         </div>
       </div>

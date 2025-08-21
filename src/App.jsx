@@ -639,7 +639,7 @@ export default function App() {
                     window.dispatchEvent(event);
                   }}>
                     <Image size={20} />
-                    Выбрать из галереи
+                    Добавить фото
                   </button>
                 </div>
               </div>
