@@ -54,7 +54,7 @@ const WardrobePage = ({ telegramId, access, onBack, profile }) => {
 
 useEffect(() => {
   console.log('WardrobePage useEffect:', { telegramId, access, hasFetched: hasFetched.current });
-  if (!hasFetched.current && telegramId && (access === 'full' || access === "full")) {
+  if (!hasFetched.current && telegramId && (access === 'full' || access === 'demo')) {
     console.log('Access granted, fetching wardrobe...');
     hasFetched.current = true;
     fetchWardrobe();
