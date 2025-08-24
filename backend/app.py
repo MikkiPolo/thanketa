@@ -627,6 +627,10 @@ def generate_capsules():
         profile = data.get('profile', {})
         weather = data.get('weather', {})
         
+        # Проверяем, что weather не None
+        if weather is None:
+            weather = {}
+        
         if not wardrobe:
             return jsonify({'error': 'No wardrobe items provided'}), 400
         
@@ -1274,7 +1278,7 @@ def filter_wardrobe_by_season(wardrobe, season):
 def get_season_from_weather_simple(weather_data):
     """Детерминированное определение сезона по температуре и описанию погоды."""
     try:
-        if not weather_data:
+        if not weather_data or weather_data is None:
             return "Круглогодично"
         temp = weather_data.get('main', {}).get('temp') or weather_data.get('temperature')
         desc = (weather_data.get('weather', [{}])[0].get('description') if isinstance(weather_data.get('weather'), list) else weather_data.get('condition')) or ''
