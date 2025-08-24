@@ -221,6 +221,8 @@ def figure_pass(group: str, desc: str, rules: Dict[str,Set[str]]) -> bool:
     return True
 
 def accessory_subtype(item: Dict[str,Any]) -> str:
+    if item is None:
+        return "other"
     c = norm(item.get("category"))
     d = norm(item.get("description") or item.get("описание"))
     s = c + " " + d
