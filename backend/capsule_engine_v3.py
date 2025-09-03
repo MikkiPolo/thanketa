@@ -13,6 +13,25 @@ from enum import Enum
 # КОНСТАНТЫ И СЛОВАРИ
 # ============================================================================
 
+# Алиасы слотов для более гибкого подбора
+SLOT_ALIASES = {
+    'top': ['top', 'middle'],     # Разрешаем и базу, и рубашки/свитера
+    'middle': ['middle'],
+    'outer': ['outer'],
+    'bottom': ['bottom'],
+    'dress': ['dress'],
+    'shoes': ['shoes'],
+    'bag': ['bag'],
+    'accessory': ['accessory'],
+}
+
+# Максимальное количество использований для каждого типа слотов
+MAX_USAGE = {
+    'shoes': 3,
+    'accessory': 2,
+    '*': 1  # По умолчанию для всех остальных
+}
+
 class LayerType(Enum):
     BASE = "base"           # База (майки, футболки)
     MIDDLE = "middle"       # Средний слой (рубашки, блузы)
@@ -90,11 +109,11 @@ CATEGORY_PROPERTIES = {
 
 # Температурные диапазоны для каждого уровня теплоты
 WARMTH_TEMPERATURE_RANGES = {
-    WarmthLevel.VERY_LIGHT: (15, 50),  # +15°C и выше
-    WarmthLevel.LIGHT: (5, 35),        # +5°C до +35°C
-    WarmthLevel.MEDIUM: (-5, 30),      # -5°C до +30°C
-    WarmthLevel.WARM: (-15, 20),       # -15°C до +20°C
-    WarmthLevel.VERY_WARM: (-50, 10),  # -50°C до +10°C
+    WarmthLevel.VERY_LIGHT: (25, 60),  # +25°C и выше
+    WarmthLevel.LIGHT: (15, 25),       # +15°C до +25°C
+    WarmthLevel.MEDIUM: (5, 15),       # +5°C до +15°C
+    WarmthLevel.WARM: (-5, 5),         # -5°C до +5°C
+    WarmthLevel.VERY_WARM: (-60, -5),  # -5°C и ниже
 }
 
 # ============================================================================
@@ -133,6 +152,47 @@ class CapsuleCandidate:
     template: CapsuleTemplate
     missing_slots: List[str]
     explanation: str
+
+# ============================================================================
+# ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
+# ============================================================================
+
+def norm_id(item: Dict[str, Any]) -> str:
+    """Нормализация ID вещи для предотвращения коллизий"""
+    raw = item.get('id')
+    if isinstance(raw, list):
+        raw = raw[0] if raw else None
+    return str(raw or f"tmp_{id(item)}")
+
+def attach_props(items: List[Dict[str, Any]]) -> None:
+    """Прикрепляет свойства к вещам один раз при загрузке"""
+    for item in items:
+        item['_props'] = normalize_item(item)
+
+def can_use(item_id: str, slot: str, usage: Dict[str, int]) -> bool:
+    """Проверяет, можно ли использовать вещь с учетом ограничений"""
+    cap = MAX_USAGE.get(slot, MAX_USAGE['*'])
+    return usage.get(item_id, 0) < cap
+
+def candidates_for_slot(items_by_slot: Dict[str, List[Dict[str, Any]]], slot: str) -> List[Dict[str, Any]]:
+    """Получает кандидатов для слота с учетом алиасов"""
+    candidates = []
+    for alias_slot in SLOT_ALIASES.get(slot, [slot]):
+        candidates.extend(items_by_slot.get(alias_slot, []))
+    return candidates
+
+def _formality_in_range(item: Dict[str, Any], template: 'CapsuleTemplate') -> bool:
+    """Проверяет, подходит ли вещь по формальности для шаблона"""
+    if not hasattr(item, '_props') or not item['_props']:
+        return True  # Если нет свойств, пропускаем проверку
+    
+    formality = item['_props'].formality
+    if hasattr(formality, 'value'):
+        f_value = formality.value
+    else:
+        f_value = int(formality)
+    
+    return template.min_formality <= f_value <= template.max_formality
 
 # ============================================================================
 # ОСНОВНЫЕ ФУНКЦИИ
@@ -411,18 +471,86 @@ def check_silhouette_compatibility(items: Dict[str, Any]) -> bool:
 
 def check_color_compatibility(items: Dict[str, Any]) -> bool:
     """Проверка совместимости цветов"""
-    # Базовая реализация
+    if not items:
+        return True
+    
+    temps = []
+    accents = 0
+    
+    for item in items.values():
+        if not hasattr(item, '_props') or not item['_props']:
+            continue
+            
+        props = item['_props']
+        
+        # Собираем цветовые температуры
+        if hasattr(props, 'color_temperature') and props.color_temperature in ('warm', 'cool'):
+            temps.append(props.color_temperature)
+        
+        # Считаем акценты (яркие цвета или принты)
+        if (hasattr(props, 'color_saturation') and props.color_saturation == 'bright') or \
+           (hasattr(props, 'has_pattern') and props.has_pattern):
+            accents += 1
+    
+    # Запрещаем 3+ активных акцента
+    if accents >= 3:
+        return False
+    
+    # Проверяем совместимость цветовых температур
+    if temps:
+        # Разрешаем: все теплые, все холодные, или нейтральные как "джокеры"
+        if not (all(t == 'warm' for t in temps) or all(t == 'cool' for t in temps)):
+            # Проверяем наличие нейтральных цветов
+            has_neutral = any(
+                hasattr(item, '_props') and item['_props'] and 
+                getattr(item['_props'], 'color_temperature', 'neutral') == 'neutral'
+                for item in items.values()
+            )
+            if not has_neutral:
+                return False
+    
     return True
 
 def check_texture_compatibility(items: Dict[str, Any]) -> bool:
     """Проверка совместимости фактур"""
-    # Базовая реализация
-    return True
+    if not items:
+        return True
+    
+    # Считаем "героев" с выраженной фактурой
+    hero_count = 0
+    for item in items.values():
+        if not hasattr(item, '_props') or not item['_props']:
+            continue
+            
+        props = item['_props']
+        if hasattr(props, 'texture') and props.texture in ('thick', 'rough', 'leather', 'suede'):
+            hero_count += 1
+    
+    # Не более 2 "героев" с выраженной фактурой
+    return hero_count <= 2
 
 def check_formality_compatibility(items: Dict[str, Any]) -> bool:
     """Проверка совместимости формальности"""
-    # Базовая реализация
-    return True
+    if not items:
+        return True
+    
+    formality_values = []
+    for item in items.values():
+        if not hasattr(item, '_props') or not item['_props']:
+            continue
+            
+        props = item['_props']
+        if hasattr(props, 'formality'):
+            if hasattr(props.formality, 'value'):
+                formality_values.append(props.formality.value)
+            else:
+                formality_values.append(int(props.formality))
+    
+    if not formality_values:
+        return True
+    
+    # Разброс формальности не должен быть больше 2 уровней
+    return (max(formality_values) - min(formality_values)) <= 2
 
 # ============================================================================
 # STAGE D: СКОРИНГ
@@ -465,8 +593,38 @@ def score_silhouette(capsule: Dict[str, Any]) -> float:
 
 def score_colors(capsule: Dict[str, Any]) -> float:
     """Оценка цветов (0-100)"""
-    # Базовая реализация
-    return 75
+    if not capsule:
+        return 0.0
+    
+    # Базовый скор
+    base_score = 70.0
+    bonus = 0.0
+    penalty = 0.0
+    
+    # Анализируем цвета
+    bright_count = 0
+    muted_count = 0
+    
+    for item in capsule.values():
+        if not hasattr(item, '_props') or not item['_props']:
+            continue
+            
+        props = item['_props']
+        if hasattr(props, 'color_saturation'):
+            if props.color_saturation == 'bright':
+                bright_count += 1
+            elif props.color_saturation == 'muted':
+                muted_count += 1
+    
+    # Бонус за баланс акцента и базы
+    if bright_count >= 1 and muted_count >= 1:
+        bonus += 20.0
+    
+    # Штраф за слишком много ярких цветов
+    if bright_count >= 3:
+        penalty += 15.0
+    
+    return max(0.0, min(100.0, base_score + bonus - penalty))
 
 def score_weather(capsule: Dict[str, Any]) -> float:
     """Оценка соответствия погоде (0-100)"""
@@ -498,10 +656,18 @@ def generate_capsules_v3(wardrobe_items: List[Dict[str, Any]],
                         weather: Optional[Dict[str, Any]] = None,
                         body_type: Optional[str] = None,
                         color_type: Optional[str] = None,
-                        history: Optional[List[str]] = None) -> List[Dict[str, Any]]:
+                        history: Optional[List[str]] = None,
+                        seed: Optional[int] = None) -> List[Dict[str, Any]]:
     """
     Основная функция генерации капсул по новому алгоритму
     """
+    # Инициализация
+    if seed is not None:
+        random.seed(seed)
+    
+    # Прикрепляем свойства к вещам один раз
+    attach_props(wardrobe_items)
+    
     print(f"🚀 Начало генерации капсул v3")
     if temperature is not None:
         print(f"📦 Входные данные: {len(wardrobe_items)} вещей, температура {temperature}°C")
@@ -537,8 +703,7 @@ def generate_capsules_v3(wardrobe_items: List[Dict[str, Any]],
     capsules = []
     used_combinations = set(history or [])
     
-    used_items = set()  # Отслеживаем использованные вещи
-    item_usage_count = {}  # Отслеживаем количество использований для обуви и аксессуаров
+    item_usage_count = {}  # Отслеживаем количество использований для всех вещей
     
     for template in templates:
         # Ограничиваем количество капсул для каждого шаблона
@@ -549,7 +714,7 @@ def generate_capsules_v3(wardrobe_items: List[Dict[str, Any]],
             break
             
         template_capsules = generate_capsules_for_template(
-            filtered_items, template, template_max, used_combinations, used_items, item_usage_count
+            filtered_items, template, template_max, used_combinations, item_usage_count
         )
         capsules.extend(template_capsules)
         
@@ -598,7 +763,6 @@ def generate_capsules_for_template(items: List[Dict[str, Any]],
                                  template: CapsuleTemplate,
                                  max_count: int,
                                  used_combinations: Set[str],
-                                 used_items: Set[str],
                                  item_usage_count: Dict[str, int]) -> List[Dict[str, Any]]:
     """Генерация капсул для конкретного шаблона"""
     print(f"🎯 Генерируем капсулы для шаблона: {template.name}")
@@ -614,7 +778,7 @@ def generate_capsules_for_template(items: List[Dict[str, Any]],
         attempts += 1
         
         # Пробуем создать капсулу
-        capsule = try_create_capsule(items_by_slot, template, used_combinations, used_items, item_usage_count)
+        capsule = try_create_capsule(items_by_slot, template, used_combinations, item_usage_count)
         
         if capsule:
             # Проверяем совместимость
@@ -682,7 +846,6 @@ def group_items_by_slots(items: List[Dict[str, Any]]) -> Dict[str, List[Dict[str
 def try_create_capsule(items_by_slot: Dict[str, List[Dict[str, Any]]], 
                       template: CapsuleTemplate,
                       used_combinations: Set[str],
-                      used_items: Set[str],
                       item_usage_count: Dict[str, int]) -> Optional[Dict[str, Any]]:
     """Попытка создания капсулы по шаблону"""
     capsule = {}
@@ -725,7 +888,7 @@ def try_create_capsule(items_by_slot: Dict[str, List[Dict[str, Any]]],
                     item_id = item['id']
                     if isinstance(item_id, list):
                         item_id = item_id[0] if item_id else 'unknown'
-                    if item_id not in used_items:
+                    if can_use(item_id, slot, item_usage_count):
                         available_items.append(item)
                 
                 if not available_items:
@@ -735,10 +898,8 @@ def try_create_capsule(items_by_slot: Dict[str, List[Dict[str, Any]]],
                 
                 item = random.choice(available_items)
                 capsule[slot] = item
-                item_id = item['id']
-                if isinstance(item_id, list):
-                    item_id = item_id[0] if item_id else 'unknown'
-                used_items.add(item_id)
+                item_id = norm_id(item)
+                item_usage_count[item_id] = item_usage_count.get(item_id, 0) + 1
         else:
             # Если нет обуви, но есть другие обязательные элементы, создаем капсулу без обуви
             if slot == 'shoes':
@@ -783,7 +944,7 @@ def try_create_capsule(items_by_slot: Dict[str, List[Dict[str, Any]]],
                         item_id = item['id']
                         if isinstance(item_id, list):
                             item_id = item_id[0] if item_id else 'unknown'
-                        if item_id not in used_items:
+                        if can_use(item_id, slot, item_usage_count):
                             available_items.append(item)
                     
                     if available_items:
@@ -792,7 +953,7 @@ def try_create_capsule(items_by_slot: Dict[str, List[Dict[str, Any]]],
                         item_id = item['id']
                         if isinstance(item_id, list):
                             item_id = item_id[0] if item_id else 'unknown'
-                        used_items.add(item_id)
+                        item_usage_count[item_id] = item_usage_count.get(item_id, 0) + 1
                     else:
                         # Если все вещи использованы, берем подходящую (игнорируем ограничения)
                         available_items = items_by_slot[slot]
@@ -843,7 +1004,8 @@ def generate_capsules(wardrobe_items: List[Dict[str, Any]],
                      weather: Optional[Dict[str, Any]] = None,
                      body_type: Optional[str] = None,
                      color_type: Optional[str] = None,
-                     history: Optional[List[str]] = None) -> Dict[str, Any]:
+                     history: Optional[List[str]] = None,
+                     seed: Optional[int] = None) -> Dict[str, Any]:
     """
     Главная функция для генерации капсул
     Совместима с существующим API
@@ -855,7 +1017,8 @@ def generate_capsules(wardrobe_items: List[Dict[str, Any]],
         weather=weather,
         body_type=body_type,
         color_type=color_type,
-        history=history
+        history=history,
+        seed=seed
     )
     
     # Преобразуем в формат, ожидаемый app.py
