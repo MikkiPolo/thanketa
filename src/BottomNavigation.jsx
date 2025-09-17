@@ -1,8 +1,18 @@
 import React, { useEffect, useRef } from 'react';
-import { Home, Shirt, Sparkles, Heart, User } from 'lucide-react';
+import { Home, Shirt, Sparkles, Heart, MessageCircle, User } from 'lucide-react';
 
 const BottomNavigation = ({ activePage, onPageChange }) => {
   const barRef = useRef(null);
+
+  const handleChatClick = () => {
+    // Отправляем сообщение в чат и закрываем приложение
+    if (window.Telegram?.WebApp) {
+      window.Telegram.WebApp.sendData(JSON.stringify({
+        message: "Прошу, спрашивай, что тебе интересно"
+      }));
+      window.Telegram.WebApp.close();
+    }
+  };
 
   useEffect(() => {
     const root = document.documentElement;
@@ -36,6 +46,7 @@ const BottomNavigation = ({ activePage, onPageChange }) => {
     { id: 'wardrobe', icon: Shirt, label: 'Гардероб' },
     { id: 'capsules', icon: Sparkles, label: 'Капсулы' },
     { id: 'favorites', icon: Heart, label: 'Избранное' },
+    { id: 'chat', icon: MessageCircle, label: 'Чат', isSpecial: true },
     { id: 'profile', icon: User, label: 'Профиль' }
   ];
 
@@ -49,7 +60,13 @@ const BottomNavigation = ({ activePage, onPageChange }) => {
           <button
             key={item.id}
             className={`nav-item ${isActive ? 'active' : ''}`}
-            onClick={() => onPageChange(item.id)}
+            onClick={() => {
+              if (item.isSpecial) {
+                handleChatClick();
+              } else {
+                onPageChange(item.id);
+              }
+            }}
           >
             <IconComponent 
               size={24} 
