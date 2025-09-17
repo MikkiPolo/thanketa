@@ -61,7 +61,7 @@ from dotenv import load_dotenv
 from config import Config
 from ai_wardrobe_analyzer import AIWardrobeAnalyzer, AIAnalyzerFactory, UserFeedback, AnalysisResult
 try:
-    from capsule_engine_v3 import generate_capsules as rule_generate_capsules
+    from capsule_engine_v2 import generate_capsules as rule_generate_capsules
 except Exception:
     rule_generate_capsules = None
 import json
@@ -684,12 +684,14 @@ def generate_capsules():
             print(f'🔧 Параметры генерации: сезон={current_season}, температура={temp_c}, max_total=30')
             capsules_core = rule_generate_capsules(
                 wardrobe_items=wardrobe,
-                temperature=temp_c,
-                max_total=30,
-                weather=weather,
-                body_type=profile.get('figura',''),
-                color_type=profile.get('cvetotip',''),
-                history=exclude_combos
+                season_hint=current_season,
+                temp_c=temp_c,
+                predpochtenia="Повседневный",
+                figura=profile.get('figura',''),
+                cvetotip=profile.get('cvetotip',''),
+                banned_ids=[],
+                allowed_ids=None,
+                max_total=30
             )
             try:
                 total_caps = sum(len(cat.get('fullCapsules', [])) for cat in capsules_core.get('categories', []))
