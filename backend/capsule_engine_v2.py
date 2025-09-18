@@ -236,29 +236,35 @@ def is_season_ok(item: Dict[str,Any], season_hint: str, temp_c: float) -> bool:
     if "всесезон" in season: return True
 
     d = norm(item.get("description") or item.get("описание"))
+    season_hint_norm = norm(season_hint)
 
-    # Основные сезоны по улучшенной схеме
-    if "зим" in season and temp_c <= 7:
+    # Основные температурные диапазоны (более гибкие)
+    if "зим" in season and temp_c <= 10:  # Зимние вещи до 10°C
         return True
-    if ("весн" in season or "осен" in season) and 7 < temp_c <= 20:
+    if ("весн" in season or "осен" in season) and 5 <= temp_c <= 25:  # Весенне-осенние вещи 5-25°C
         return True
-    if "лет" in season and temp_c > 20:
+    if "лет" in season and temp_c >= 15:  # Летние вещи от 15°C
         return True
 
     # Дополнительные эвристики по материалам
-    if any(k in d for k in ["лёгк","легк","шифон","лен","льнян"]) and temp_c > 25:
+    if any(k in d for k in ["лёгк","легк","шифон","лен","льнян"]) and temp_c > 20:
         return True
     if any(k in d for k in ["шерст","плотн"]) and temp_c <= 15:
         return True
 
-    # Смягчающий фактор: если season_hint совпадает с сезоном вещи
-    # НО только если вещь уже подходит по температуре
-    season_hint_norm = norm(season_hint)
-    if "лет" in season and "лет" in season_hint_norm and temp_c > 15:  # Летние вещи только при тепле
+    # Смягчающий фактор: календарный сезон как подсказка
+    # Позволяет использовать вещи "не по сезону" при подходящей температуре
+    if "лет" in season and "лет" in season_hint_norm and temp_c > 12:  # Летние вещи в летний сезон при тепле
         return True
-    if "зим" in season and "зим" in season_hint_norm and temp_c <= 10:  # Зимние вещи только при холоде
+    if "зим" in season and "зим" in season_hint_norm and temp_c <= 15:  # Зимние вещи в зимний сезон при холоде
         return True
-    if ("весн" in season or "осен" in season) and ("весн" in season_hint_norm or "осен" in season_hint_norm) and 5 <= temp_c <= 20:
+    if ("весн" in season or "осен" in season) and ("весн" in season_hint_norm or "осен" in season_hint_norm) and 3 <= temp_c <= 25:
+        return True
+
+    # Дополнительная гибкость: вещи соседних сезонов при подходящей температуре
+    if "лет" in season and temp_c >= 20:  # Летние вещи при любой температуре >= 20°C
+        return True
+    if "зим" in season and temp_c <= 5:  # Зимние вещи при любой температуре <= 5°C
         return True
 
     return False

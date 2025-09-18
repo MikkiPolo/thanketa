@@ -673,7 +673,7 @@ def generate_capsules():
         if use_rule and rule_generate_capsules:
             print('🧩 Используем rule-based генератор капсул (engine=rule, по умолчанию)')
             print(f'📊 Статистика гардероба: всего {len(wardrobe)} вещей')
-            current_season = get_season_from_weather_simple(weather)
+            current_season = get_season_from_date()
             temp_c = weather.get('main', {}).get('temp') or weather.get('temperature', 20)
             try:
                 temp_c = float(temp_c)
@@ -1270,6 +1270,24 @@ def filter_wardrobe_by_season(wardrobe, season):
             filtered.append(item)
     
     return filtered if filtered else wardrobe
+
+def get_season_from_date():
+    """Определение сезона по текущей дате."""
+    try:
+        now = datetime.now()
+        month = now.month
+        
+        # Календарные сезоны
+        if month in [12, 1, 2]:  # Декабрь, Январь, Февраль
+            return "Зима"
+        elif month in [3, 4, 5]:  # Март, Апрель, Май
+            return "Весна"
+        elif month in [6, 7, 8]:  # Июнь, Июль, Август
+            return "Лето"
+        else:  # Сентябрь, Октябрь, Ноябрь
+            return "Осень"
+    except Exception:
+        return "Круглогодично"
 
 def get_season_from_weather_simple(weather_data):
     """Детерминированное определение сезона по температуре и описанию погоды."""
