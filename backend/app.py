@@ -834,7 +834,7 @@ def generate_capsules_with_gpt(wardrobe, profile, weather):
         client = openai.OpenAI(api_key=api_key)
         
         # 1. Определяем сезон детерминированно (без GPT)
-        current_season = get_season_from_weather_simple(weather)
+        current_season = get_season_from_date()
         
         # 2. Фильтруем гардероб по сезону и пригодности
         filtered_wardrobe = [it for it in wardrobe if str(it.get('is_suitable', True)).lower() != 'false']
