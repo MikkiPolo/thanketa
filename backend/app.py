@@ -667,9 +667,9 @@ def generate_capsules():
                 print("⚠️ cache_key не создан — кэш пропущен")
 
         # Выбор движка: rule-based или GPT
-        engine = str(data.get('engine') or data.get('rule_engine') or data.get('no_gpt') or '').lower()
+        engine = str(data.get('engine') or '').lower()
         # По умолчанию используем RULE-движок; GPT только при явном engine=gpt
-        use_rule = engine != 'gpt' or data.get('rule_engine') == True
+        use_rule = engine != 'gpt'
         if use_rule and rule_generate_capsules:
             print('🧩 Используем rule-based генератор капсул (engine=rule, по умолчанию)')
             print(f'📊 Статистика гардероба: всего {len(wardrobe)} вещей')
