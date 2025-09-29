@@ -462,8 +462,8 @@ def generate_capsules(
         min_shoes_needed = max(1, (max_total + max_per_item - 1) // max_per_item)
         if len(shoes) < min_shoes_needed:
             print(f"⚠️ Недостаточно обуви: {len(shoes)} из {min_shoes_needed} нужных (max_total={max_total}, max_per_item={max_per_item})")
-            print("🔄 Генерируем капсулы без обуви...")
-            shoes = []  # Пустой список обуви = генерируем без неё
+            print("🔄 Генерируем капсулы с переиспользованием обуви...")
+            # НЕ исключаем обувь полностью, позволяем переиспользование
         else:
             print(f"✅ Обувь найдена: {len(shoes)} пар (нужно {min_shoes_needed})")
     else:
@@ -572,8 +572,8 @@ def generate_capsules(
         return temp_c < include_outerwear_below and bool(outer_q)
 
     def commit(items: List[Dict[str,Any]]):
-        # Обувь обязательна только если она доступна
-        if shoes and not any(translate_category(x["category"])=="shoes" for x in items):
+        # Обувь обязательна только если она доступна И есть в очереди
+        if shoes_q and not any(translate_category(x["category"])=="shoes" for x in items):
             return False
         
         key = unique_key(items)
