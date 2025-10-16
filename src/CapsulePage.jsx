@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Star, Shirt, Briefcase, Sparkles, Sun, Plane, Download, Heart } from 'lucide-react';
+import { ArrowLeft, Star, Shirt, Briefcase, Sparkles, Sun, Plane, Heart, ShoppingBag } from 'lucide-react';
 import { wardrobeService, favoritesService } from './supabase';
+import brandItemsService from './services/brandItemsService';
 import { BACKEND_URL, API_ENDPOINTS } from './config.js';
 import LoadingModal from './LoadingModal';
 
@@ -58,6 +59,32 @@ const CapsulePage = ({ profile, onBack, initialCapsule = null, isFavoritesView =
     loadFavorites();
     loadCachedCapsules();
   }, []);
+
+  // 🛍️ АВТОМАТИЧЕСКАЯ ОТПРАВКА IMPRESSIONS ДЛЯ ВСЕХ ВИДИМЫХ ТОВАРОВ БРЕНДОВ
+  useEffect(() => {
+    if (!capsules || !Array.isArray(capsules) || capsules.length === 0) {
+      return;
+    }
+
+    // Отправляем impressions для всех товаров брендов во всех капсулах
+    const impressionsSent = new Set(); // Чтобы не отправлять дубликаты
+
+    capsules.forEach(capsule => {
+      (capsule.items || []).forEach(item => {
+        if (item.is_brand_item && item.id) {
+          const uniqueKey = `${item.id}_${capsule.id}`;
+          if (!impressionsSent.has(uniqueKey)) {
+            brandItemsService.trackImpression(item.id, profile.telegram_id, capsule.id);
+            impressionsSent.add(uniqueKey);
+          }
+        }
+      });
+    });
+
+    if (impressionsSent.size > 0) {
+      console.log(`📊 Отправлено ${impressionsSent.size} impressions для товаров брендов`);
+    }
+  }, [capsules, profile.telegram_id]); // Запускается при смене капсул
 
 
 
@@ -168,6 +195,8 @@ const CapsulePage = ({ profile, onBack, initialCapsule = null, isFavoritesView =
       const generatedCapsules = await generateCapsulesFromWardrobe(eligibleWardrobe, profile, weather, { forceRefresh: true });
       
       console.log('✅ Капсулы успешно сгенерированы!');
+      console.log('🛍️ Товары брендов уже подмешаны бэкендом');
+      
       setCapsules(generatedCapsules);
       
       // Сохраняем в кэш
@@ -324,12 +353,33 @@ const CapsulePage = ({ profile, onBack, initialCapsule = null, isFavoritesView =
            const flat = [];
           (result.capsules.categories || []).forEach(category => {
             (category.fullCapsules || []).forEach(capsule => {
-              const itemsResolved = sortItemsByCategory((capsule.items || []).map(itemId => {
-                const item = wardrobe.find(w => w.id === itemId && w.is_suitable !== false);
-                return item ? {
-                  ...item,
-                  imageUrl: item.image_id ? wardrobeService.getImageUrl(profile.telegram_id, item.image_id) : null
-                } : null;
+              const itemsResolved = sortItemsByCategory((capsule.items || []).map(itemIdOrObject => {
+                // Проверяем: это ID вещи пользователя или полный объект товара бренда?
+                if (typeof itemIdOrObject === 'object' && itemIdOrObject !== null) {
+                  // Это товар бренда (полный объект)
+                  console.log('🛍️ Brand item detected:', itemIdOrObject);
+                  console.log('🖼️ image_url:', itemIdOrObject.image_url);
+                  console.log('🖼️ imageUrl:', itemIdOrObject.imageUrl);
+                  
+                  const processedItem = {
+                    ...itemIdOrObject,
+                    imageUrl: itemIdOrObject.imageUrl || itemIdOrObject.image_url || null, // Поддерживаем оба формата
+                    is_brand_item: true // Помечаем как товар бренда
+                  };
+                  
+                  console.log('✅ Processed brand item:', processedItem);
+                  console.log('🖼️ Final imageUrl:', processedItem.imageUrl);
+                  
+                  return processedItem;
+                } else {
+                  // Это ID вещи пользователя (строка/число)
+                  const item = wardrobe.find(w => w.id === itemIdOrObject && w.is_suitable !== false);
+                  return item ? {
+                    ...item,
+                    imageUrl: item.image_id ? wardrobeService.getImageUrl(profile.telegram_id, item.image_id) : null,
+                    is_brand_item: false
+                  } : null;
+                }
               }).filter(Boolean));
               flat.push({
                 id: capsule.id,
@@ -664,9 +714,9 @@ const CapsulePage = ({ profile, onBack, initialCapsule = null, isFavoritesView =
             ctx.shadowColor = 'transparent';
 
             // Изображение предмета
-            if (item.imageUrl) {
+            if (item.imageUrl || item.image_url) {
               try {
-                const img = await loadImage(item.imageUrl);
+                const img = await loadImage(item.imageUrl || item.image_url);
                 
                 // Вычисляем размеры для вписывания в квадрат
                 const scale = Math.min(itemSize / img.width, itemSize / img.height);
@@ -731,69 +781,6 @@ const CapsulePage = ({ profile, onBack, initialCapsule = null, isFavoritesView =
     });
   };
 
-  // Функция для скачивания изображения
-  const downloadImage = async (imageBlob, capsuleName) => {
-    try {
-      const url = URL.createObjectURL(imageBlob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `capsule_${capsuleName.replace(/\s+/g, '_')}.png`;
-      link.click();
-      URL.revokeObjectURL(url);
-      
-    } catch (error) {
-      console.error('Ошибка скачивания:', error);
-      alert('Ошибка при скачивании изображения');
-    }
-  };
-
-  // Функция для отправки капсулы
-  const shareCapsule = async (capsule) => {
-    if (!capsule || !capsule.items || capsule.items.length === 0) {
-      alert('Нет предметов для отправки');
-      return;
-    }
-
-    let imageBlob = null;
-    let loadingText = null;
-
-    try {
-      // Показываем индикатор загрузки
-      loadingText = document.createElement('div');
-      loadingText.textContent = 'Генерируем изображение...';
-      loadingText.style.cssText = `
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        background: rgba(0, 0, 0, 0.8);
-        color: white;
-        padding: 1rem 2rem;
-        border-radius: 8px;
-        z-index: 10000;
-      `;
-      document.body.appendChild(loadingText);
-
-      // Генерируем изображение
-      imageBlob = await generateCapsuleImage(capsule);
-      
-      // Убираем индикатор загрузки
-      if (loadingText && loadingText.parentNode) {
-        document.body.removeChild(loadingText);
-      }
-
-      // Скачиваем изображение
-      await downloadImage(imageBlob, capsule.name);
-    } catch (error) {
-      // Убираем индикатор загрузки в случае ошибки
-      if (loadingText && loadingText.parentNode) {
-        document.body.removeChild(loadingText);
-      }
-
-      console.error('Ошибка создания изображения:', error);
-      alert('Ошибка при создании изображения капсулы');
-    }
-  };
 
   const getLucideIcon = (iconName) => {
     const iconMap = {
@@ -884,38 +871,61 @@ const CapsulePage = ({ profile, onBack, initialCapsule = null, isFavoritesView =
                     className="capsule-item-overlay"
                     data-category={item.category?.toLowerCase()}
                   >
-                    {item.imageUrl && item.imageUrl !== 'null' && (
+                    {(item.imageUrl || item.image_url) && (item.imageUrl || item.image_url) !== 'null' && (
                       <img 
-                        src={item.imageUrl} 
+                        src={item.imageUrl || item.image_url} 
                         alt={item.description}
                         onError={(e) => {
+                          console.error('❌ Ошибка загрузки изображения в деталях:', e.target.src);
                           if (e.target.src.includes('.png')) {
                             e.target.src = e.target.src.replace('.png', '.jpg');
+                            console.log('🔄 Пробуем .jpg версию:', e.target.src);
                           }
+                        }}
+                        onLoad={() => {
+                          console.log('✅ Изображение в деталях загружено:', item.imageUrl || item.image_url);
                         }}
                       />
                     )}
                   </div>
                 ))}
                 
-                {/* Кнопка скачивания на подложке капсулы */}
-                <button 
-                  className="capsule-download-btn"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    shareCapsule(selectedCapsule);
-                  }}
-                  title="Скачать изображение капсулы"
-                >
-                  <Download size={24} />
-                </button>
               </div>
               
               <div className="capsule-items-list">
                 {selectedCapsule.items.map((item, index) => (
-                  <div key={index} className="capsule-item-info">
-                    <h4>{item.category}</h4>
+                  <div 
+                    key={index} 
+                    className={`capsule-item-info ${item.is_brand_item ? 'brand-item' : ''}`}
+                    onClick={() => {
+                      if (item.is_brand_item) {
+                        // Товар бренда - открыть магазин
+                        brandItemsService.handleItemClick(item, profile.telegram_id, selectedCapsule.id);
+                      }
+                    }}
+                    style={item.is_brand_item ? { cursor: 'pointer' } : {}}
+                  >
+                    <h4>
+                      {item.category}
+                      {item.is_brand_item && (
+                        <span style={{ 
+                          marginLeft: '8px', 
+                          fontSize: '12px', 
+                          background: '#000', 
+                          color: '#fff', 
+                          padding: '2px 6px', 
+                          borderRadius: '4px' 
+                        }}>
+                          🛍️ {item.brand_name || 'Бренд'}
+                        </span>
+                      )}
+                    </h4>
                     <p>{item.description}</p>
+                    {item.is_brand_item && item.price && (
+                      <p style={{ fontWeight: 'bold', color: '#000', marginTop: '4px' }}>
+                        {item.price} {item.currency || 'RUB'}
+                      </p>
+                    )}
                   </div>
                 ))}
               </div>
@@ -984,25 +994,67 @@ const CapsulePage = ({ profile, onBack, initialCapsule = null, isFavoritesView =
                   <div 
                     key={capsule.id} 
                     className="capsule-card"
-                    onClick={() => setSelectedCapsule(capsule)}
+                    onClick={() => {
+                      setSelectedCapsule(capsule);
+                      // Impressions уже отправлены при загрузке капсул (см. useEffect выше)
+                    }}
                   >
-                    <div className={`capsule-canvas-preview grid ${preview.length > 6 ? 'grid-3' : ''}`}>
+                    <div className={`capsule-canvas-preview grid ${preview.length > 6 ? 'grid-3' : ''} ${
+                      preview.length >= 9 ? 'has-9-items' : 
+                      preview.length >= 8 ? 'has-8-items' : 
+                      preview.length >= 7 ? 'has-many-items' : ''
+                    }`}>
                       {preview.map((it, index) => (
                         <div
                           key={index}
                           className="capsule-canvas-item"
                           data-category={it.category?.toLowerCase()}
+                          onClick={(e) => {
+                            // Если это товар бренда - открываем магазин (не открывая саму капсулу)
+                            if (it.is_brand_item && it.shop_link) {
+                              e.stopPropagation(); // Останавливаем всплытие события
+                              brandItemsService.handleItemClick(it, profile.telegram_id, capsule.id);
+                            }
+                          }}
+                          style={{
+                            cursor: it.is_brand_item ? 'pointer' : 'default',
+                            border: it.is_brand_item ? '1.5px solid rgba(0, 0, 0, 0.3)' : 'none',
+                            borderRadius: it.is_brand_item ? '8px' : '0',
+                            overflow: 'hidden'
+                          }}
                         >
-                          {it.imageUrl && it.imageUrl !== 'null' && (
+                          {(it.imageUrl || it.image_url) && (it.imageUrl || it.image_url) !== 'null' && (
                             <img
-                              src={it.imageUrl}
+                              src={it.imageUrl || it.image_url}
                               alt={it.description}
                               onError={(e) => {
+                                console.error('❌ Ошибка загрузки изображения:', e.target.src);
+                                console.error('❌ Статус:', e.target.naturalWidth === 0 ? 'Не загружено' : 'Загружено');
                                 if (e.target.src.includes('.png')) {
                                   e.target.src = e.target.src.replace('.png', '.jpg');
+                                  console.log('🔄 Пробуем .jpg версию:', e.target.src);
                                 }
                               }}
+                              onLoad={() => {
+                                console.log('✅ Изображение загружено:', it.imageUrl || it.image_url);
+                              }}
                             />
+                          )}
+                          {/* Бейдж для товаров брендов */}
+                          {it.is_brand_item && (
+                            <div style={{
+                              position: 'absolute',
+                              top: '4px',
+                              right: '4px',
+                              background: '#000',
+                              color: '#fff',
+                              padding: '2px 6px',
+                              borderRadius: '4px',
+                              fontSize: '10px',
+                              fontWeight: 'bold'
+                            }}>
+                              🛍️
+                            </div>
                           )}
                         </div>
                       ))}
@@ -1010,10 +1062,12 @@ const CapsulePage = ({ profile, onBack, initialCapsule = null, isFavoritesView =
                     {moreCount > 0 && (
                       <div className="capsule-more-badge">+{moreCount}</div>
                     )}
-                    <div className="capsule-name">{capsule.name || 'Капсула'}</div>
                   </div>
                 );
               })}
+              
+              {/* Пустая капсула-спейсер для предотвращения перекрытия навигацией */}
+              <div className="capsule-spacer"></div>
             </div>
           </>
         ) : (

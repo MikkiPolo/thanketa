@@ -143,9 +143,9 @@ const FavoritesPage = ({ telegramId, showNotification }) => {
                 <div className={`capsule-canvas-preview grid ${picked.length > 6 ? 'grid-3' : ''}`}>
                   {picked.map((item, index) => (
                     <div key={index} className="capsule-canvas-item">
-                      {item.imageUrl && item.imageUrl !== 'null' && (
+                      {(item.imageUrl || item.image_url) && (item.imageUrl || item.image_url) !== 'null' && (
                         <img 
-                          src={item.imageUrl} 
+                          src={item.imageUrl || item.image_url} 
                           alt={item.description}
                           onError={(e) => { if (e.target.src.includes('.png')) { e.target.src = e.target.src.replace('.png', '.jpg'); } }}
                         />

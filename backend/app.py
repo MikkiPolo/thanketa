@@ -119,7 +119,8 @@ ALLOWED_ORIGINS = [
 if os.getenv('ALLOWED_ORIGIN'):
     ALLOWED_ORIGINS.append(os.getenv('ALLOWED_ORIGIN'))
 
-CORS(app, origins=ALLOWED_ORIGINS, supports_credentials=True)
+# Разрешаем все origins для разработки (включая ngrok)
+CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=False)
 
 # Добавляем логирование CORS
 @app.before_request
@@ -681,18 +682,39 @@ def generate_capsules():
                 temp_c = 20.0
             # Лимит 20 капсул и исключение уже показанных комбинаций (если пришли с фронта)
             exclude_combos = data.get('exclude_combinations') or []
-            print(f'🔧 Параметры генерации: сезон={current_season}, температура={temp_c}, max_total=30')
-            capsules_core = rule_generate_capsules(
-                wardrobe_items=wardrobe,
-                season_hint=current_season,
-                temp_c=temp_c,
-                predpochtenia="Повседневный",
-                figura=profile.get('figura',''),
-                cvetotip=profile.get('cvetotip',''),
-                banned_ids=[],
-                allowed_ids=None,
-                max_total=30
-            )
+            
+            # Проверяем режим генерации: enhanced (улучшенный) или rule (базовый)
+            use_enhanced = data.get('use_enhanced_engine', True)  # По умолчанию используем улучшенный
+            
+            if use_enhanced:
+                print(f'🎨 Параметры генерации (ENHANCED): сезон={current_season}, температура={temp_c}, max_total=20')
+                from capsule_engine_enhanced import generate_enhanced_capsules
+                
+                capsules_core = generate_enhanced_capsules(
+                    wardrobe_items=wardrobe,
+                    season_hint=current_season,
+                    temp_c=temp_c,
+                    predpochtenia="Повседневный",
+                    figura=profile.get('figura',''),
+                    cvetotip=profile.get('cvetotip',''),
+                    banned_ids=[],
+                    allowed_ids=None,
+                    max_total=20
+                )
+            else:
+                print(f'🔧 Параметры генерации (BASIC): сезон={current_season}, температура={temp_c}, max_total=20')
+                capsules_core = rule_generate_capsules(
+                    wardrobe_items=wardrobe,
+                    season_hint=current_season,
+                    temp_c=temp_c,
+                    predpochtenia="Повседневный",
+                    figura=profile.get('figura',''),
+                    cvetotip=profile.get('cvetotip',''),
+                    banned_ids=[],
+                    allowed_ids=None,
+                    max_total=20,
+                    exclude_combinations=exclude_combos  # ← ДОБАВЛЕНО: исключения
+                )
             try:
                 total_caps = sum(len(cat.get('fullCapsules', [])) for cat in capsules_core.get('categories', []))
             except Exception:
@@ -710,6 +732,61 @@ def generate_capsules():
             # fallback if helper returned plain structure
             capsules_obj = capsules_payload
             meta_obj = {}
+
+        # Дополнение капсул брендовыми товарами (если недостаточно вещей)
+        enable_brand_mixing = data.get('enable_brand_items', True)
+        
+        if enable_brand_mixing and capsules_obj:
+            try:
+                from brand_service_v4 import supplement_capsules_with_brand_items, mix_brand_items_v4
+                
+                # СНАЧАЛА дополняем недостающие капсулы
+                if 'categories' in capsules_obj:
+                    for category in capsules_obj['categories']:
+                        user_capsules = category.get('fullCapsules', [])
+                        
+                        if len(user_capsules) < total_caps:
+                            print(f"🛍️ ДОПОЛНЯЕМ КАПСУЛЫ брендовыми товарами...")
+                            supplemented = supplement_capsules_with_brand_items(
+                                user_capsules=user_capsules,
+                                target_count=total_caps,
+                                season=current_season,
+                                temperature=temp_c
+                            )
+                            category['fullCapsules'] = supplemented
+                            category['capsules'] = supplemented
+                
+                # ПОТОМ подмешиваем товары в существующие капсулы
+                print("🛍️ НАЧИНАЕМ ПОДМЕШИВАНИЕ V4...")
+                print("✅ V4 импортирован успешно")
+                
+                # Получаем капсулы из результата
+                if 'categories' in capsules_obj:
+                    for category in capsules_obj['categories']:
+                        user_capsules = category.get('fullCapsules', [])
+                        
+                        if user_capsules:
+                            print(f"🔄 Вызываем V4 для {len(user_capsules)} капсул...")
+                            # НОВАЯ ЛОГИКА V4: ротация брендовых товаров + исключения
+                            mixed = mix_brand_items_v4(
+                                user_capsules=user_capsules,
+                                wardrobe=wardrobe,  # ← ДОБАВЛЕНО: передаем гардероб
+                                season=current_season,
+                                temperature=temp_c,
+                                mixing_percentage=0.35,  # 35% капсул = 7 из 20
+                                exclude_combinations=exclude_combos  # ← ДОБАВЛЕНО: исключения
+                            )
+                            print("✅ V4 завершен успешно")
+                            
+                            category['fullCapsules'] = mixed
+                            category['capsules'] = mixed
+                            
+                            print(f"  🛍️ Подмешивание V4 завершено для категории")
+            except Exception as mix_error:
+                print(f"  ⚠️ Ошибка подмешивания товаров брендов: {mix_error}")
+                import traceback
+                traceback.print_exc()
+                # Продолжаем без подмешивания
 
         response_obj = {
             'capsules': capsules_obj,

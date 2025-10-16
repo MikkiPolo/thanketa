@@ -354,9 +354,9 @@ html, body {
 }
 
 .app {
-  height: 100vh;
+  height: 100vh; /* ВОЗВРАЩАЕМ: фиксированная высота */
   width: 100vw;
-  overflow: hidden;
+  overflow: hidden; /* ВОЗВРАЩАЕМ: скрываем переполнение */
   display: flex;
   justify-content: center;
   align-items: flex-start;
@@ -390,8 +390,8 @@ html, body {
   padding: 0;
   position: relative;
   transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out, background 0.3s ease;
-  overflow-y: auto;
-  height: 100%;
+  overflow-y: visible !important; /* ИСПРАВЛЕНО: разрешаем показ всех элементов */
+  height: auto !important; /* ИСПРАВЛЕНО: автоматическая высота */
   justify-content: flex-start;
 
   -webkit-overflow-scrolling: touch;
@@ -669,19 +669,19 @@ input[type="text"]:focus {
     flex-direction: column;
 
     /* адаптация под мобильный WebView */
-    height: 100vh;
-    max-height: 100vh;
-    overflow-y: auto;
+    height: auto !important; /* ИСПРАВЛЕНО: автоматическая высота */
+    max-height: none !important; /* ИСПРАВЛЕНО: убираем ограничение высоты */
+    overflow-y: visible !important; /* ИСПРАВЛЕНО: разрешаем показ всех элементов */
     -webkit-overflow-scrolling: touch;
   }
   
   .app {
     align-items: stretch;
     min-height: 100vh;
-    height: 100vh !important;
-    max-height: 100vh !important;
+    height: 100vh !important; /* ВОЗВРАЩАЕМ: фиксированная высота */
+    max-height: 100vh !important; /* ВОЗВРАЩАЕМ: ограничение высоты */
     background: var(--card-bg) !important;
-    overflow-y: hidden;
+    overflow-y: auto; /* ВОЗВРАЩАЕМ: скролл */
     display: flex;
     justify-content: stretch;
     padding: 0;
@@ -1496,25 +1496,26 @@ html {
 }
 
 .capsule-card {
-  background: #F9F9F9 !important;
-  border: none !important;
+  background: #FFFFFF !important;
+  border: 1.5px solid rgba(0, 0, 0, 0.3) !important;
   cursor: pointer;
   transition: all 0.2s ease;
   display: flex !important;
-  flex-direction: column !important; /* название под превью */
+  flex-direction: column !important;
   align-items: stretch !important;
   justify-content: flex-start !important;
-  overflow: hidden;
+  overflow: visible !important; /* ИСПРАВЛЕНО: разрешаем показ всех элементов */
   width: 100% !important;
   height: auto !important;
-  padding: 10px !important;
+  padding: 8px !important;
   margin: 0 !important;
-  border-radius: 14px !important;
+  border-radius: 8px !important;
   position: relative !important;
 }
 
 .capsule-card:hover {
   background: rgba(0, 0, 0, 0.02);
+  border-color: rgba(0, 0, 0, 0.5);
 }
 
 .capsule-canvas-preview {
@@ -1522,9 +1523,11 @@ html {
   width: 100% !important;
   background: #fff !important; /* белый холст */
   border-radius: 12px !important;
-  overflow: hidden !important;
-  aspect-ratio: 2 / 3 !important; /* максимальные пропорции для сетки 2x3 */
+  overflow: visible !important; /* разрешаем показ всех элементов */
+  height: auto !important; /* автоматическая высота */
+  min-height: 240px !important; /* УВЕЛИЧЕНО: с 200px до 240px для крупных иконок */
   margin-bottom: 8px !important;
+  padding: 0 !important; /* ИСПРАВЛЕНО: убираем внутренние отступы */
 }
 
 /* Невидимая grid-раскладка: без линий и рамок */
@@ -1533,24 +1536,42 @@ html {
   grid-template-columns: repeat(2, 1fr) !important; /* 1-4 вещей — 2x2, без видимых линий */
   align-items: center !important;
   justify-items: center !important;
-  gap: 6px !important;           /* визуальных линий нет, только расстояние */
-  padding: 6px !important;        /* небольшой внутренний отступ */
+  gap: 4px !important;           /* ИСПРАВЛЕНО: минимальное расстояние */
+  padding: 4px !important;       /* ИСПРАВЛЕНО: минимальный отступ */
 }
 
 .capsule-canvas-preview.grid.grid-3 {
   grid-template-columns: repeat(3, 1fr) !important;
+  grid-auto-rows: 1fr !important;
+}
+
+/* Классы для разного количества элементов - полностью автоматическая высота */
+.capsule-canvas-preview.grid.has-many-items {
+  min-height: 320px !important; /* УВЕЛИЧЕНО: с 280px до 320px */
+  height: auto !important;
+}
+
+.capsule-canvas-preview.grid.has-8-items {
+  min-height: 360px !important; /* УВЕЛИЧЕНО: с 320px до 360px */
+  height: auto !important;
+}
+
+.capsule-canvas-preview.grid.has-9-items {
+  min-height: 400px !important; /* УВЕЛИЧЕНО: с 360px до 400px */
+  height: auto !important;
 }
 
 .capsule-canvas-preview.grid .capsule-canvas-item {
   position: static !important;    /* позиции задает сетка */
   width: 100% !important;
-  aspect-ratio: 1 / 1 !important; /* аккуратные квадраты без рамок */
+  height: 100px !important; /* УВЕЛИЧЕНО: с 80px до 100px для крупных иконок */
   background: transparent !important;
+  margin: 0 !important; /* ИСПРАВЛЕНО: убираем отступы элементов */
 }
 
 .capsule-canvas-preview.grid .capsule-canvas-item img {
-  width: 90% !important;
-  height: 90% !important;
+  width: 95% !important; /* УВЕЛИЧЕНО: с 90% до 95% для крупных иконок */
+  height: 95% !important; /* УВЕЛИЧЕНО: с 90% до 95% для крупных иконок */
   object-fit: contain !important;
 }
 
@@ -1619,9 +1640,10 @@ html {
     aspect-ratio: auto !important;
     min-height: 0 !important;
     max-height: none !important;
-    padding: 10px !important;
-    border-radius: 14px !important;
-    background: #f7f7f8 !important;
+    padding: 8px !important;
+    border-radius: 8px !important;
+    background: #FFFFFF !important;
+    border: 1.5px solid rgba(0, 0, 0, 0.3) !important;
     position: relative !important;
   }
 
@@ -1687,13 +1709,13 @@ html {
   position: relative;
   width: 100%;
   min-height: 300px;
-  max-height: 700px;
+  max-height: none !important; /* ИСПРАВЛЕНО: убираем ограничение высоты */
   background: #F9F9F9;
   margin-bottom: 1.5rem;
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
+  overflow: visible !important; /* ИСПРАВЛЕНО: разрешаем показ всех элементов */
   border-radius: 8px;
   box-sizing: border-box;
 }
@@ -1783,8 +1805,8 @@ html {
   align-items: center;
   justify-items: center;
   min-height: 300px;
-  max-height: 500px;
-  overflow: hidden;
+  max-height: none !important; /* ИСПРАВЛЕНО: убираем ограничение высоты */
+  overflow: visible !important; /* ИСПРАВЛЕНО: разрешаем показ всех элементов */
   box-sizing: border-box;
   position: relative;
 }
@@ -1843,8 +1865,19 @@ html {
 .capsule-actions {
   background: #F9F9F9;
   padding: 1.5rem;
+  padding-bottom: calc(1.5rem + 80px) !important; /* ИСПРАВЛЕНО: добавляем отступ для нижней навигации */
   border: none;
   text-align: center;
+  position: relative;
+  z-index: 1; /* ИСПРАВЛЕНО: ниже нижней навигации */
+}
+
+/* Стили для кнопок избранного */
+.add-to-favorites-btn,
+.remove-from-favorites-btn {
+  position: relative;
+  z-index: 1; /* ИСПРАВЛЕНО: ниже нижней навигации */
+  margin-bottom: 20px;
 }
 
 .favorite-btn {
@@ -1900,14 +1933,14 @@ html {
   
   .capsule-outfit {
     min-height: 400px;
-    max-height: 600px;
+    max-height: none !important; /* ИСПРАВЛЕНО: убираем ограничение высоты */
   }
   
   .capsule-outfit.grid-layout {
     grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
     gap: 2rem;
     padding: 2.5rem;
-    max-height: 600px;
+    max-height: none !important; /* ИСПРАВЛЕНО: убираем ограничение высоты */
   }
   
   .capsule-outfit.grid-layout .capsule-item-overlay {
@@ -1951,14 +1984,14 @@ html {
   
   .capsule-outfit {
     min-height: 500px;
-    max-height: 700px;
+    max-height: none !important; /* ИСПРАВЛЕНО: убираем ограничение высоты */
   }
   
   .capsule-outfit.grid-layout {
     grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
     gap: 2.5rem;
     padding: 3rem;
-    max-height: 700px;
+    max-height: none !important; /* ИСПРАВЛЕНО: убираем ограничение высоты */
   }
   
   .capsule-outfit.grid-layout .capsule-item-overlay {
@@ -3243,11 +3276,33 @@ html {
 /* Override for capsules page to fix positioning */
 .capsules-page .card {
   justify-content: flex-start;
-  padding-bottom: 120px; /* Увеличенный отступ для нижней навигации */
+  padding-bottom: 20px !important; /* ИСПРАВЛЕНО: минимальный отступ, так как есть спейсер */
+}
+
+/* Дополнительный отступ для мобильных устройств */
+@media (max-width: 600px) {
+  .capsules-page .card {
+    padding-bottom: 20px !important; /* Минимальный отступ для мобильных */
+  }
 }
 
 .capsules-page .categories-grid {
   margin-bottom: 2rem;
+}
+
+/* Пустая капсула-спейсер для предотвращения перекрытия навигацией */
+.capsule-spacer {
+  width: 100% !important;
+  height: 120px !important; /* Высота как у обычной капсулы */
+  background: transparent !important; /* Прозрачная */
+  border: none !important; /* Без рамки */
+  margin: 0 !important;
+  padding: 0 !important;
+  display: grid !important;
+  grid-template-columns: repeat(2, 1fr) !important; /* Сетка 2x1 */
+  grid-template-rows: 1fr !important; /* Одна строка */
+  gap: 4px !important;
+  pointer-events: none !important; /* Не кликабельная */
 }
 
 /* Стили для страницы избранного */
@@ -3782,49 +3837,6 @@ html {
   }
 }
 
-/* Кнопка скачивания на подложке капсулы в стиле Lucide */
-.capsule-download-btn {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  background: transparent;
-  color: rgba(0, 0, 0, 0.4);
-  border: none;
-  border-radius: 6px;
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  z-index: 10;
-}
-
-.capsule-download-btn:hover {
-  background: rgba(0, 0, 0, 0.05);
-  color: rgba(0, 0, 0, 0.7);
-}
-
-.capsule-download-btn:active {
-  background: rgba(0, 0, 0, 0.1);
-  color: rgba(0, 0, 0, 0.8);
-}
-
-/* Темная тема для кнопки скачивания */
-[data-theme="dark"] .capsule-download-btn {
-  color: rgba(255, 255, 255, 0.4);
-}
-
-[data-theme="dark"] .capsule-download-btn:hover {
-  background: rgba(255, 255, 255, 0.05);
-  color: rgba(255, 255, 255, 0.7);
-}
-
-[data-theme="dark"] .capsule-download-btn:active {
-  background: rgba(255, 255, 255, 0.1);
-  color: rgba(255, 255, 255, 0.8);
-}
 
 /* Favorites Page Styles - v4 - FORCE UPDATE */
 .favorites-page-header {
