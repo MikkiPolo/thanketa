@@ -15,30 +15,12 @@ from typing import List, Dict, Any, Optional
 import random
 import os
 from collections import defaultdict
-from supabase import create_client, Client
-
-
-def get_supabase_client() -> Optional[Client]:
-    """Получить клиент Supabase"""
-    try:
-        url = os.getenv('VITE_SUPABASE_URL') or os.getenv('SUPABASE_URL')
-        key = os.getenv('VITE_SUPABASE_ANON_KEY') or os.getenv('SUPABASE_ANON_KEY')
-        
-        if not url or not key:
-            print("⚠️ Supabase credentials not found in environment")
-            return None
-            
-        return create_client(url, key)
-    except Exception as e:
-        print(f"❌ Ошибка подключения к Supabase: {e}")
-        return None
+import requests
 
 
 def get_all_brand_items_by_season(season: str) -> List[Dict[str, Any]]:
     """Получить ВСЕ товары брендов по сезону через ПУБЛИЧНЫЙ API"""
     try:
-        import requests
-        
         # Маппинг сезонов на русский язык для API
         season_map = {
             'Весна': 'Весна',
@@ -52,7 +34,7 @@ def get_all_brand_items_by_season(season: str) -> List[Dict[str, Any]]:
         # Запрос к публичному API (БЕЗ категории - только сезон!)
         api_url = f"https://linapolo.ru/api/public/items/capsule?season={season_ru}"
         
-        print(f"📡 Запрос к API: {api_url}")
+        print(f"📡 V5: Запрос к API: {api_url}")
         
         response = requests.get(api_url, timeout=30)
         response.raise_for_status()
@@ -65,46 +47,16 @@ def get_all_brand_items_by_season(season: str) -> List[Dict[str, Any]]:
             item['is_brand_item'] = True
             if 'shop_link' not in item or not item['shop_link']:
                 item['shop_link'] = None
+            if 'impressions_count' not in item:
+                item['impressions_count'] = 0
         
-        print(f"✅ Загружено {len(items)} товаров брендов через публичный API")
+        print(f"✅ V5: Загружено {len(items)} товаров брендов через публичный API")
         print(f"   Алгоритм: {data.get('algorithm', 'unknown')}")
         return items
     
     except Exception as e:
-        print(f"❌ Ошибка загрузки товаров брендов через API: {e}")
-        print(f"🔄 Пробуем FALLBACK на прямой запрос к Supabase...")
-        
-        # FALLBACK: прямой запрос к Supabase
-        try:
-            supabase = get_supabase_client()
-            if not supabase:
-                return []
-            
-            response = supabase.table('brand_items') \
-                .select('id, brand_id, category, season, description, image_id, shop_link, price, currency') \
-                .eq('is_approved', True) \
-                .eq('is_active', True) \
-                .execute()
-            
-            items = response.data if response.data else []
-            
-            for item in items:
-                if item.get('image_id') and item.get('brand_id'):
-                    item['image_url'] = f"https://lipolo.store/storage/v1/object/public/brand-items-images/{item['brand_id']}/{item['image_id']}.jpg"
-                else:
-                    item['image_url'] = None
-                item['is_brand_item'] = True
-                item['brand_name'] = 'LiMango'
-                if 'shop_link' not in item or not item['shop_link']:
-                    item['shop_link'] = None
-                if 'impressions_count' not in item:
-                    item['impressions_count'] = 0
-            
-            print(f"✅ FALLBACK: Загружено {len(items)} товаров брендов из Supabase")
-            return items
-        except Exception as fallback_error:
-            print(f"❌ FALLBACK тоже не сработал: {fallback_error}")
-            return []
+        print(f"❌ V5: Ошибка загрузки товаров брендов через API: {e}")
+        return []
 
 
 def map_brand_category_to_engine_category(brand_category: str) -> str:
