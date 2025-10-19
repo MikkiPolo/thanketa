@@ -56,7 +56,17 @@ def get_all_brand_items_by_season(season: str) -> List[Dict[str, Any]]:
     
     except Exception as e:
         print(f"❌ V5: Ошибка загрузки товаров брендов через API: {e}")
-        return []
+        print(f"🔄 V5: Пробуем FALLBACK на brand_service_v4...")
+        
+        # FALLBACK: используем функцию из brand_service_v4
+        try:
+            from brand_service_v4 import get_all_brand_items_by_season as get_v4
+            items = get_v4(season)
+            print(f"✅ V5 FALLBACK: Загружено {len(items)} товаров через V4")
+            return items
+        except Exception as fallback_error:
+            print(f"❌ V5 FALLBACK тоже не сработал: {fallback_error}")
+            return []
 
 
 def map_brand_category_to_engine_category(brand_category: str) -> str:
