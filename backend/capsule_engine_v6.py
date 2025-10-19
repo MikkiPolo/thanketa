@@ -596,21 +596,21 @@ def generate_capsules(
         if not (has_dress or (has_top and has_bottom)):
             return None
         
-        # Обязательно: сумка (если есть хоть одна в гардеробе)
-        if bags_q and 'bags' not in cats:
-            return None
+        # Сумка желательна, но НЕ обязательна (если нет в гардеробе)
+        # if bags_q and 'bags' not in cats:
+        #     return None
         
         # ВАЛИДАЦИЯ АКСЕССУАРОВ по температуре
         acc_subtypes = [accessory_subtype(i) for i in items if translate_category(i.get('category', '')) == 'accessories']
         
-        if is_cool:  # 15-20°C: ОБЯЗАТЕЛЬНО кардиган + аксессуары
+        if is_cool:  # 15-20°C: ОБЯЗАТЕЛЬНО кардиган, аксессуары желательны
             # Обязательно: кардиган/пиджак при прохладе
             if 'light_outerwear' not in cats:
                 return None
-            # Обязательно: хотя бы 1 видимый аксессуар
-            has_visible_acc = any(st in acc_subtypes for st in ['earrings', 'necklace', 'belt', 'bracelet'])
-            if not has_visible_acc:
-                return None
+            # Аксессуары желательны, но НЕ обязательны (если нет в гардеробе)
+            # has_visible_acc = any(st in acc_subtypes for st in ['earrings', 'necklace', 'belt', 'bracelet'])
+            # if not has_visible_acc:
+            #     return None
         
         # Помечаем все вещи
         for it in items:

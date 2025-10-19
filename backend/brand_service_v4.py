@@ -13,12 +13,13 @@ from typing import List, Dict, Any, Optional, Set
 import random
 import os
 from collections import defaultdict
-from supabase import create_client, Client
 
 
-def get_supabase_client() -> Optional[Client]:
-    """Получить клиент Supabase"""
+def get_supabase_client():
+    """Получить клиент Supabase (импорт внутри функции для избежания блокировки модуля)"""
     try:
+        from supabase import create_client, Client
+        
         url = os.getenv('VITE_SUPABASE_URL') or os.getenv('SUPABASE_URL')
         key = os.getenv('VITE_SUPABASE_ANON_KEY') or os.getenv('SUPABASE_ANON_KEY')
         
@@ -27,6 +28,9 @@ def get_supabase_client() -> Optional[Client]:
             return None
             
         return create_client(url, key)
+    except ImportError:
+        print("⚠️ Модуль supabase не установлен, FALLBACK на Supabase недоступен")
+        return None
     except Exception as e:
         print(f"❌ Ошибка подключения к Supabase: {e}")
         return None
