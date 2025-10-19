@@ -5,6 +5,7 @@ import WardrobePage from './WardrobePage';
 import CapsulePage from './CapsulePage';
 import FavoritesPage from './FavoritesPage';
 import ProfilePage from './ProfilePage';
+import ShopPage from './ShopPage';
 import ProfileMenuModal from './ProfileMenuModal';
 
 import BottomNavigation from './BottomNavigation';
@@ -20,6 +21,7 @@ import NotificationModal from './NotificationModal';
 import { useCache } from './cache';
 import { profileService } from './supabase';
 import telegramWebApp from './telegramWebApp';
+import brandItemsService from './services/brandItemsService';
 import TelegramIdDebugger from './TelegramIdDebugger';
 import { normalizeText, validateAge, cleanAge } from './utils/textUtils';
 
@@ -51,6 +53,11 @@ export default function App() {
   
   // Инициализация кэша
   const cache = useCache();
+  
+  // Делаем brandItemsService доступным глобально для ShopPage
+  useEffect(() => {
+    window.brandItemsService = brandItemsService;
+  }, []);
 
   // Мемоизируем вопросы
   const questions = useMemo(() => [
@@ -584,6 +591,57 @@ export default function App() {
                   margin: "0 auto",
                 }}
               >
+                {/* Кнопки профиля на главной странице */}
+                {existingProfile && existingProfile.name && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '3rem' }}>
+                    <button 
+                      className="btn-primary" 
+                      onClick={() => setCurrentPage('profile')}
+                      style={{ padding: '12px 20px', fontSize: '1rem' }}
+                    >
+                      Просмотреть профиль
+                    </button>
+
+                    <button 
+                      className="btn-secondary" 
+                      onClick={() => {
+                        const supportUrl = `https://t.me/glamorasupportbot${existingProfile?.telegram_id ? `?start=uid_${existingProfile.telegram_id}` : ''}`;
+                        try {
+                          if (window?.Telegram?.WebApp?.openTelegramLink) {
+                            window.Telegram.WebApp.openTelegramLink(supportUrl);
+                          } else {
+                            window.open(supportUrl, '_blank');
+                          }
+                        } catch (e) {
+                          window.open(supportUrl, '_blank');
+                        }
+                      }}
+                      style={{ padding: '12px 20px', fontSize: '1rem' }}
+                    >
+                      Обратиться в поддержку
+                    </button>
+
+                    <button 
+                      className="btn-secondary" 
+                      onClick={() => {
+                        const feedbackUrl = `https://t.me/glamorafeedbackbot${existingProfile?.telegram_id ? `?start=uid_${existingProfile.telegram_id}` : ''}`;
+                        try {
+                          if (window?.Telegram?.WebApp?.openTelegramLink) {
+                            window.Telegram.WebApp.openTelegramLink(feedbackUrl);
+                          } else {
+                            window.open(feedbackUrl, '_blank');
+                          }
+                        } catch (e) {
+                          window.open(feedbackUrl, '_blank');
+                        }
+                      }}
+                      style={{ padding: '12px 20px', fontSize: '1rem' }}
+                    >
+                      Оставить отзыв
+                    </button>
+                  </div>
+                )}
+
                 <div className="buttons" style={{ marginTop: "1.5rem" }}>
                   {!existingProfile || !existingProfile.name ? (
                     <button onClick={handleStart} className="next">
@@ -707,7 +765,14 @@ export default function App() {
             <ProfilePage telegramId={existingProfile?.telegram_id || 'default'} />
           )}
 
-
+          {currentPage === 'shop' && (
+            <ShopPage 
+              telegramId={existingProfile?.telegram_id || 'default'}
+              season={existingProfile?.season || 'Осень'}
+              temperature={15.0}
+              onBack={() => setCurrentPage('home')}
+            />
+          )}
 
           {/* Нижняя навигация */}
           {existingProfile && (

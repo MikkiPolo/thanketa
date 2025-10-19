@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Home, Shirt, Sparkles, Heart, MessageCircle, User } from 'lucide-react';
+import { Home, Shirt, Sparkles, Heart, MessageCircle, ShoppingBag } from 'lucide-react';
 
 const BottomNavigation = ({ activePage, onPageChange }) => {
   const barRef = useRef(null);
@@ -47,7 +47,7 @@ const BottomNavigation = ({ activePage, onPageChange }) => {
     { id: 'capsules', icon: Sparkles, label: 'Капсулы' },
     { id: 'favorites', icon: Heart, label: 'Избранное' },
     { id: 'chat', icon: MessageCircle, label: 'Чат', isSpecial: true },
-    { id: 'profile', icon: User, label: 'Профиль' }
+    { id: 'shop', icon: ShoppingBag, label: 'Магазин' }
   ];
 
   return (

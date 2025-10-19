@@ -480,11 +480,17 @@ def wardrobe_recommendations():
                     return jsonify({ 'recommendations': content, 'unsuitable_items': [] })
             except Exception as e:
                 print(f"❌ Ошибка GPT рекомендаций: {e}")
-                # Падает в фолбэк
-                return jsonify({ 'recommendations': build_fallback_recommendations(), 'unsuitable_items': [] })
+                # Возвращаем сообщение об ошибке
+                return jsonify({ 
+                    'recommendations': 'Анализ временно недоступен. Попробуйте позже.', 
+                    'unsuitable_items': [] 
+                })
 
-        # Если API ключа нет — фолбэк
-        return jsonify({ 'recommendations': build_fallback_recommendations(), 'unsuitable_items': [] })
+        # Если API ключа нет — сообщаем об этом
+        return jsonify({ 
+            'recommendations': 'Анализ временно недоступен. Попробуйте позже.', 
+            'unsuitable_items': [] 
+        })
     except Exception as e:
         print(f"❌ Ошибка рекомендаций гардероба: {e}")
         return jsonify({ 'recommendations': 'Не удалось выполнить анализ. Попробуйте позже.', 'unsuitable_items': [] }), 200
@@ -738,7 +744,8 @@ def generate_capsules():
         
         if enable_brand_mixing and capsules_obj:
             try:
-                from brand_service_v4 import supplement_capsules_with_brand_items, mix_brand_items_v4
+                from brand_service_v5 import mix_brand_items_v5
+                from brand_service_v4 import supplement_capsules_with_brand_items
                 
                 # СНАЧАЛА дополняем недостающие капсулы
                 if 'categories' in capsules_obj:
@@ -757,8 +764,8 @@ def generate_capsules():
                             category['capsules'] = supplemented
                 
                 # ПОТОМ подмешиваем товары в существующие капсулы
-                print("🛍️ НАЧИНАЕМ ПОДМЕШИВАНИЕ V4...")
-                print("✅ V4 импортирован успешно")
+                print("🛍️ НАЧИНАЕМ ПОДМЕШИВАНИЕ V5...")
+                print("✅ V5 импортирован успешно")
                 
                 # Получаем капсулы из результата
                 if 'categories' in capsules_obj:
@@ -766,22 +773,21 @@ def generate_capsules():
                         user_capsules = category.get('fullCapsules', [])
                         
                         if user_capsules:
-                            print(f"🔄 Вызываем V4 для {len(user_capsules)} капсул...")
-                            # НОВАЯ ЛОГИКА V4: ротация брендовых товаров + исключения
-                            mixed = mix_brand_items_v4(
+                            print(f"🔄 Вызываем V5 для {len(user_capsules)} капсул...")
+                            # НОВАЯ ЛОГИКА V5: гибкое распределение (7+6+3+3+1)
+                            mixed = mix_brand_items_v5(
                                 user_capsules=user_capsules,
-                                wardrobe=wardrobe,  # ← ДОБАВЛЕНО: передаем гардероб
+                                wardrobe=wardrobe,
                                 season=current_season,
                                 temperature=temp_c,
-                                mixing_percentage=0.35,  # 35% капсул = 7 из 20
-                                exclude_combinations=exclude_combos  # ← ДОБАВЛЕНО: исключения
+                                exclude_combinations=exclude_combos
                             )
-                            print("✅ V4 завершен успешно")
+                            print("✅ V5 завершен успешно")
                             
                             category['fullCapsules'] = mixed
                             category['capsules'] = mixed
                             
-                            print(f"  🛍️ Подмешивание V4 завершено для категории")
+                            print(f"  🛍️ Подмешивание V5 завершено для категории")
             except Exception as mix_error:
                 print(f"  ⚠️ Ошибка подмешивания товаров брендов: {mix_error}")
                 import traceback
