@@ -17,8 +17,8 @@ from capsule_engine_v2 import (
     accessory_subtype
 )
 
-# Используем V4 для генерации базовых капсул (правильная логика)
-from capsule_engine_v4 import generate_capsules as generate_capsules_v4
+# Используем V6 для генерации базовых капсул (правильная логика)
+from capsule_engine_v6 import generate_capsules
 from style_analyzer import (
     extract_colors,
     are_colors_harmonious,
@@ -62,10 +62,10 @@ def generate_enhanced_capsules(
     print(f"🎨 Запуск улучшенной генерации капсул (enhanced engine)")
     print(f"   Сезон: {season_hint}, температура: {temp_c}°C")
     
-    # ШАГ 1: Генерируем капсулы через V4 (правильная логика)
-    print(f"📦 Генерируем {max_total * 2} базовых капсул через V4...")
+    # ШАГ 1: Генерируем капсулы через V6 (правильная логика)
+    print(f"📦 Генерируем {max_total} базовых капсул через V6...")
     
-    base_capsules = generate_capsules_v4(
+    base_capsules = generate_capsules(
         wardrobe_items=wardrobe_items,
         season_hint=season_hint,
         temp_c=temp_c,
@@ -74,7 +74,7 @@ def generate_enhanced_capsules(
         cvetotip=cvetotip,
         banned_ids=banned_ids,
         allowed_ids=allowed_ids,
-        max_total=max_total * 2  # Генерируем в 2 раза больше для отбора лучших
+        max_total=max_total  # Генерируем ровно 20 капсул
     )
     
     # Извлекаем капсулы из структуры v2

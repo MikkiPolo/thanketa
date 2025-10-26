@@ -14,6 +14,34 @@ import random
 import os
 from collections import defaultdict
 
+# Импортируем функцию из V5
+def identify_accessory_subtype(description: str) -> str:
+    """Определяет подтип аксессуара по описанию"""
+    desc_lower = description.lower()
+    
+    if 'серьг' in desc_lower or 'кольц' in desc_lower and 'уш' in desc_lower:
+        return 'earrings'
+    elif 'ожерел' in desc_lower or 'колье' in desc_lower or 'цепь' in desc_lower or 'цепоч' in desc_lower:
+        return 'necklace'
+    elif 'брасл' in desc_lower:
+        return 'bracelet'
+    elif 'ремен' in desc_lower or 'пояс' in desc_lower:
+        return 'belt'
+    elif 'кольцо' in desc_lower and 'уш' not in desc_lower:
+        return 'ring'
+    elif 'часы' in desc_lower:
+        return 'watch'
+    elif 'очки' in desc_lower:
+        return 'sunglasses'
+    elif 'шапк' in desc_lower or 'берет' in desc_lower or 'панам' in desc_lower or 'шляп' in desc_lower:
+        return 'headwear'
+    elif 'шарф' in desc_lower or 'платок' in desc_lower:
+        return 'scarf'
+    elif 'перчат' in desc_lower or 'варежк' in desc_lower:
+        return 'gloves'
+    else:
+        return 'other'
+
 
 def get_supabase_client():
     """Получить клиент Supabase (импорт внутри функции для избежания блокировки модуля)"""
@@ -454,7 +482,8 @@ def supplement_capsules_with_brand_items(
     user_capsules: List[Dict[str, Any]],
     target_count: int,
     season: str,
-    temperature: float = 20.0
+    temperature: float = 20.0,
+    user_wardrobe: Optional[List[Dict[str, Any]]] = None
 ) -> List[Dict[str, Any]]:
     """
     ДОПОЛНЯЕТ капсулы брендовыми товарами, если у пользователя недостаточно вещей
@@ -482,28 +511,73 @@ def supplement_capsules_with_brand_items(
         print("  ⚠️ Нет товаров брендов для дополнения")
         return user_capsules
     
-    # Фильтруем по температуре
+    # Импортируем функцию фильтрации
     try:
         from capsule_engine_v6 import is_suitable_for_temp_and_season
     except ImportError:
         from capsule_engine_v4 import is_suitable_for_temp_and_season
     
+    # Добавляем вещи пользователя к брендовым товарам для смешивания
+    if user_wardrobe:
+        print(f"  👤 Добавляем {len(user_wardrobe)} вещей пользователя к брендовым товарам")
+        # Фильтруем вещи пользователя по температуре
+        user_filtered = [item for item in user_wardrobe if is_suitable_for_temp_and_season(item, temperature, season)]
+        # Помечаем вещи пользователя
+        for item in user_filtered:
+            item['is_brand_item'] = False
+            # Добавляем недостающие поля для корректного отображения
+            if 'name' not in item or not item['name']:
+                item['name'] = item.get('description', 'Вещь пользователя')[:50]
+            if 'image_url' not in item:
+                item['image_url'] = None
+        all_brand_items.extend(user_filtered)
+        print(f"  ✅ Итого товаров для создания капсул: {len(all_brand_items)}")
+    
+    # Фильтруем все товары по температуре
     filtered_items = [item for item in all_brand_items if is_suitable_for_temp_and_season(item, temperature, season)]
+    print(f"  ✅ Отфильтровано {len(filtered_items)} товаров по температуре {temperature}°C")
     
     # Группируем по категориям
     brand_by_category = defaultdict(list)
+    user_items_by_category = defaultdict(list)  # Для отладки
+    
     for item in filtered_items:
-        engine_cat = map_brand_category_to_engine_category(item.get('category', ''))
+        # Для вещей пользователя используем V6 логику, для брендовых - V4
+        if not item.get('is_brand_item', True):
+            # Вещи пользователя - используем V6 логику
+            try:
+                from capsule_engine_v6 import translate_category
+                original_cat = item.get('category', '')
+                engine_cat = translate_category(original_cat)
+                # print(f"    👤 Вещь пользователя: '{original_cat}' → '{engine_cat}'")
+            except ImportError:
+                engine_cat = map_brand_category_to_engine_category(item.get('category', ''))
+        else:
+            # Брендовые товары - используем V4 логику
+            engine_cat = map_brand_category_to_engine_category(item.get('category', ''))
         
         if engine_cat == 'accessories':
             subtype = identify_accessory_subtype(item.get('description', '').lower())
             brand_by_category[f'acc_{subtype}'].append(item)
+            if not item.get('is_brand_item', True):
+                user_items_by_category[f'acc_{subtype}'].append(item)
         else:
             brand_by_category[engine_cat].append(item)
+            if not item.get('is_brand_item', True):
+                user_items_by_category[engine_cat].append(item)
+    
+    # Логируем категории вещей пользователя
+    if user_items_by_category:
+        print(f"  👤 Вещи пользователя по категориям:")
+        for cat, items in user_items_by_category.items():
+            print(f"    - {cat}: {len(items)} шт. (примеры: {', '.join([item.get('name', 'Без названия')[:20] for item in items[:3]])})")
+    else:
+        print(f"  ⚠️ Вещи пользователя не попали ни в одну категорию")
     
     # Генерируем новые капсулы из брендовых товаров
     new_capsules = []
     used_items = set()
+    item_usage_count = defaultdict(int)  # Счетчик использований каждого товара
     
     for i in range(missing_count):
         capsule_items = []
@@ -525,14 +599,21 @@ def supplement_capsules_with_brand_items(
             if cat not in brand_by_category or not brand_by_category[cat]:
                 continue
             
-            # Берем товар, который еще не использовали
-            available = [item for item in brand_by_category[cat] if item['id'] not in used_items]
+            # Берем товар, который использовался меньше всего
+            available = [item for item in brand_by_category[cat] if item_usage_count[item['id']] < 2]
             if not available:
-                available = brand_by_category[cat]  # Если все использованы, берем любой
+                # Если все товары использовались 2+ раза, берем наименее используемые
+                available = brand_by_category[cat]
             
-            item = min(available, key=lambda x: x.get('impressions_count', 0))
+            # Выбираем товар с минимальным количеством использований
+            # Приоритет вещам пользователя (is_brand_item=False)
+            item = min(available, key=lambda x: (
+                item_usage_count[x['id']],  # Локальные использования
+                x.get('is_brand_item', True),  # Приоритет вещам пользователя (False < True)
+                x.get('impressions_count', 0)  # Глобальные показы
+            ))
             capsule_items.append(item)
-            used_items.add(item['id'])
+            item_usage_count[item['id']] += 1
         
         if capsule_items:
             new_capsule = {
@@ -544,6 +625,39 @@ def supplement_capsules_with_brand_items(
             }
             new_capsules.append(new_capsule)
     
+    # Подсчитываем использование вещей пользователя
+    user_items_used = 0
+    user_items_by_capsule = []
+    
+    for i, capsule in enumerate(new_capsules):
+        capsule_user_items = []
+        for item in capsule.get('items', []):
+            if not item.get('is_brand_item', True):  # Если это вещь пользователя
+                user_items_used += 1
+                capsule_user_items.append({
+                    'name': item.get('name', 'Без названия'),
+                    'category': item.get('category', 'Неизвестно'),
+                    'description': item.get('description', '')[:50] + '...' if len(item.get('description', '')) > 50 else item.get('description', '')
+                })
+        
+        if capsule_user_items:
+            user_items_by_capsule.append({
+                'capsule_id': capsule.get('id', f'capsule_{i+1}'),
+                'capsule_name': capsule.get('name', f'Капсула {i+1}'),
+                'user_items': capsule_user_items
+            })
+    
     print(f"  ✅ Создано {len(new_capsules)} новых капсул из брендовых товаров")
+    print(f"  👤 Использовано {user_items_used} вещей пользователя в капсулах")
+    
+    # Детальная информация о вещах пользователя в капсулах
+    if user_items_by_capsule:
+        print(f"  📋 Детали использования вещей пользователя:")
+        for capsule_info in user_items_by_capsule:
+            print(f"    🎯 {capsule_info['capsule_name']} ({capsule_info['capsule_id']}):")
+            for item in capsule_info['user_items']:
+                print(f"      • {item['name']} ({item['category']}) - {item['description']}")
+    else:
+        print(f"  ⚠️ Вещи пользователя не были использованы в капсулах")
     
     return user_capsules + new_capsules

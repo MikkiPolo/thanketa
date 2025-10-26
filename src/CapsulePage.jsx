@@ -338,7 +338,7 @@ const CapsulePage = ({ profile, onBack, initialCapsule = null, isFavoritesView =
           const result = await response.json();
           console.log('Ответ от бэкенда:', result);
           if (result?.meta?.insufficient) {
-            alert('Недостаточно подходящих вещей для создания капсул. Добавьте больше вещей в гардероб или разблокируйте существующие вещи.');
+            alert('Недостаточно подходящих вещей для создания капсул. Добавьте больше вещей в гардероб. Пока мы показываем стильные образы с товарами партнеров');
           }
           
            // Проверяем структуру ответа
@@ -356,18 +356,27 @@ const CapsulePage = ({ profile, onBack, initialCapsule = null, isFavoritesView =
               const itemsResolved = sortItemsByCategory((capsule.items || []).map(itemIdOrObject => {
                 // Проверяем: это ID вещи пользователя или полный объект товара бренда?
                 if (typeof itemIdOrObject === 'object' && itemIdOrObject !== null) {
-                  // Это товар бренда (полный объект)
-                  console.log('🛍️ Brand item detected:', itemIdOrObject);
+                  // Это полный объект (брендовый товар или вещь пользователя)
+                  console.log('🛍️ Item detected:', itemIdOrObject);
                   console.log('🖼️ image_url:', itemIdOrObject.image_url);
                   console.log('🖼️ imageUrl:', itemIdOrObject.imageUrl);
+                  console.log('👤 is_brand_item:', itemIdOrObject.is_brand_item);
                   
                   const processedItem = {
                     ...itemIdOrObject,
                     imageUrl: itemIdOrObject.imageUrl || itemIdOrObject.image_url || null, // Поддерживаем оба формата
-                    is_brand_item: true // Помечаем как товар бренда
+                    is_brand_item: itemIdOrObject.is_brand_item !== false // По умолчанию true, если не указано false
                   };
                   
-                  console.log('✅ Processed brand item:', processedItem);
+                  // Для вещей пользователя добавляем правильный imageUrl
+                  if (!processedItem.is_brand_item && processedItem.id) {
+                    const userItem = wardrobe.find(w => w.id === processedItem.id && w.is_suitable !== false);
+                    if (userItem && userItem.image_id) {
+                      processedItem.imageUrl = wardrobeService.getImageUrl(profile.telegram_id, userItem.image_id);
+                    }
+                  }
+                  
+                  console.log('✅ Processed item:', processedItem);
                   console.log('🖼️ Final imageUrl:', processedItem.imageUrl);
                   
                   return processedItem;

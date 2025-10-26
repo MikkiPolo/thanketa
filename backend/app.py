@@ -694,9 +694,9 @@ def generate_capsules():
             
             if use_enhanced:
                 print(f'🎨 Параметры генерации (ENHANCED): сезон={current_season}, температура={temp_c}, max_total=20')
-                from capsule_engine_enhanced import generate_enhanced_capsules
+                from capsule_engine_v6 import generate_capsules
                 
-                capsules_core = generate_enhanced_capsules(
+                capsules_core = generate_capsules(
                     wardrobe_items=wardrobe,
                     season_hint=current_season,
                     temp_c=temp_c,
@@ -772,22 +772,22 @@ def generate_capsules():
                     for category in capsules_obj['categories']:
                         user_capsules = category.get('fullCapsules', [])
                         
-                        if user_capsules:
-                            print(f"🔄 Вызываем V5 для {len(user_capsules)} капсул...")
-                            # НОВАЯ ЛОГИКА V5: гибкое распределение (7+6+3+3+1)
-                            mixed = mix_brand_items_v5(
-                                user_capsules=user_capsules,
-                                wardrobe=wardrobe,
-                                season=current_season,
-                                temperature=temp_c,
-                                exclude_combinations=exclude_combos
-                            )
-                            print("✅ V5 завершен успешно")
-                            
-                            category['fullCapsules'] = mixed
-                            category['capsules'] = mixed
-                            
-                            print(f"  🛍️ Подмешивание V5 завершено для категории")
+                        # V5 вызывается ВСЕГДА, даже если user_capsules пустые
+                        print(f"🔄 Вызываем V5 для {len(user_capsules)} капсул...")
+                        # НОВАЯ ЛОГИКА V5: гибкое распределение (7+6+3+3+1)
+                        mixed = mix_brand_items_v5(
+                            user_capsules=user_capsules,
+                            wardrobe=wardrobe,
+                            season=current_season,
+                            temperature=temp_c,
+                            exclude_combinations=exclude_combos
+                        )
+                        print("✅ V5 завершен успешно")
+                        
+                        category['fullCapsules'] = mixed
+                        category['capsules'] = mixed
+                        
+                        print(f"  🛍️ Подмешивание V5 завершено для категории")
             except Exception as mix_error:
                 print(f"  ⚠️ Ошибка подмешивания товаров брендов: {mix_error}")
                 import traceback

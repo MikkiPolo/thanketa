@@ -253,14 +253,15 @@ useEffect(() => {
                 {wardrobe.length === 0 ? 'Гардероб пуст' : 'Ничего не найдено'}
               </div>
             ) : (
-              filteredWardrobe
-                .filter(item => item && item.id && item.category)
-                .map(item => (
-                  <div 
-                    key={item.id} 
-                    className="wardrobe-grid-item"
-                    onClick={() => handleItemClick(item)}
-                  >
+              <>
+                {filteredWardrobe
+                  .filter(item => item && item.id && item.category)
+                  .map(item => (
+                    <div 
+                      key={item.id} 
+                      className="wardrobe-grid-item"
+                      onClick={() => handleItemClick(item)}
+                    >
                     <div className="wardrobe-item-icon">
                       {item.image_id ? (
                         <img 
@@ -285,7 +286,11 @@ useEffect(() => {
                       {item.category}
                     </div>
                   </div>
-                ))
+                ))}
+                {/* Пустые карточки-спейсеры для предотвращения перекрытия навигацией */}
+                <div className="wardrobe-spacer"></div>
+                <div className="wardrobe-spacer"></div>
+              </>
             )}
           </div>
         )}
