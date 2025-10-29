@@ -3309,13 +3309,13 @@ html {
 /* Пустые карточки-спейсеры для гардероба */
 .wardrobe-spacer {
   width: 100% !important;
-  height: 50% !important; /* В 2 раза меньше высоты карточки */
+  min-height: 100px !important; /* Фиксированная минимальная высота */
   background: transparent !important; /* Прозрачная */
   border: none !important; /* Без рамки */
   margin: 0 !important;
   padding: 0 !important;
-  aspect-ratio: 3/2 !important; /* Соотношение сторон в 2 раза меньше (3/4 / 2 = 3/2) */
   pointer-events: none !important; /* Не реагирует на клики */
+  grid-column: span 2 !important; /* Занимает обе колонки */
 }
 
 /* Стили для страницы избранного */
