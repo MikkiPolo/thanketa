@@ -44,6 +44,8 @@ services:
       - LOG_LEVEL=INFO
       - ENABLE_CACHE=true
       - CACHE_TTL=3600
+      - GUNICORN_WORKERS=1
+      - GUNICORN_THREADS=4
     depends_on:
       - ollama
     networks:
