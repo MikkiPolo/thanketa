@@ -620,38 +620,54 @@ def generate_capsules(
         selected = random.choice(unused_candidates)
         return selected
     
+    def pick_accessory_from_queue(q: deque) -> Optional[Dict[str, Any]]:
+        """
+        Выбор аксессуара из очереди БЕЗ ограничения на повторное использование
+        Аксессуары могут использоваться многократно для более живых капсул
+        """
+        if not q:
+            return None
+        
+        # Просто выбираем случайный аксессуар из очереди (можно повторно использовать)
+        all_items = list(q)
+        if not all_items:
+            return None
+        
+        selected = random.choice(all_items)
+        return selected
+    
     def get_capsule_key(items: List[Dict[str, Any]]) -> str:
         return '_'.join(sorted(str(i['id']) for i in items))
     
     def pick_accessories_warm() -> List[Dict[str, Any]]:
         """Теплая погода: серьги/бусы + ремень/браслет + опции"""
         acc = []
-        x = pick_from_queue(earrings_q) or pick_from_queue(necklace_q)
+        x = pick_accessory_from_queue(earrings_q) or pick_accessory_from_queue(necklace_q)
         if x: acc.append(x)
-        y = pick_from_queue(belt_q) or pick_from_queue(bracelet_q)
+        y = pick_accessory_from_queue(belt_q) or pick_accessory_from_queue(bracelet_q)
         if y: acc.append(y)
         if watch_q and random.random() < 0.7:
-            z = pick_from_queue(watch_q)
+            z = pick_accessory_from_queue(watch_q)
             if z: acc.append(z)
         if sunglasses_q and random.random() < 0.4:
-            z = pick_from_queue(sunglasses_q)
+            z = pick_accessory_from_queue(sunglasses_q)
             if z: acc.append(z)
         if ring_q and random.random() < 0.2:
-            z = pick_from_queue(ring_q)
+            z = pick_accessory_from_queue(ring_q)
             if z: acc.append(z)
         return acc
     
     def pick_accessories_cold() -> List[Dict[str, Any]]:
         """Холодная погода: шапка + шарф + перчатки + макс серьги"""
         acc = []
-        h = pick_from_queue(headwear_q)
-        s = pick_from_queue(scarf_q)
-        g = pick_from_queue(gloves_q)
+        h = pick_accessory_from_queue(headwear_q)
+        s = pick_accessory_from_queue(scarf_q)
+        g = pick_accessory_from_queue(gloves_q)
         if h: acc.append(h)
         if s: acc.append(s)
         if g: acc.append(g)
         if earrings_q and random.random() < 0.7:
-            e = pick_from_queue(earrings_q)
+            e = pick_accessory_from_queue(earrings_q)
             if e: acc.append(e)
         return acc
     
@@ -692,9 +708,12 @@ def generate_capsules(
             if not has_visible_acc:
                 return None
         
-        # Помечаем все вещи
+        # Помечаем все вещи (кроме аксессуаров - они могут повторяться)
         for it in items:
-            mark_used(it)
+            # Аксессуары не помечаем как использованные, чтобы они могли использоваться повторно
+            item_cat = translate_category(it.get('category', ''))
+            if item_cat != 'accessories':
+                mark_used(it)
         
         produced_keys.add(key)
         
