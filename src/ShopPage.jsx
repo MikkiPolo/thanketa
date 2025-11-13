@@ -139,6 +139,8 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
             </div>
           ))
         )}
+        {/* Пустые карточки-спейсеры для предотвращения перекрытия навигацией */}
+        <div className="wardrobe-spacer"></div>
       </div>
     </div>
   );

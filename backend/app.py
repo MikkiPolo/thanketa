@@ -641,7 +641,11 @@ def generate_capsules():
         if not wardrobe:
             return jsonify({'error': 'No wardrobe items provided'}), 400
         
+        # Попытка отдать из кэша (можно отключить флагом no_cache=true)
+        no_cache = str(data.get('no_cache') or data.get('force_refresh') or '').lower() in ['1','true','yes']
+        
         # Ключ кэша по профилю+гардеробу+погоде
+        # При force_refresh добавляем timestamp для уникальности ключа
         try:
             cache_key_src = {
                 'wardrobe': wardrobe,
@@ -649,13 +653,13 @@ def generate_capsules():
                 'weather': weather,
                 'engine': str((request.get_json() or {}).get('engine') or (request.get_json() or {}).get('rule_engine') or (request.get_json() or {}).get('no_gpt'))
             }
+            # Если force_refresh, добавляем timestamp для уникальности (но не сохраняем в кэш)
+            if no_cache:
+                cache_key_src['_refresh_ts'] = int(time.time() * 1000)  # миллисекунды для уникальности
             cache_key_hash = hashlib.sha256(_json_for_cache.dumps(cache_key_src, ensure_ascii=False, sort_keys=True).encode('utf-8')).hexdigest()
             cache_key = f"capsules:{cache_key_hash}"
         except Exception:
             cache_key = None
-
-        # Попытка отдать из кэша (можно отключить флагом no_cache=true)
-        no_cache = str(data.get('no_cache') or data.get('force_refresh') or '').lower() in ['1','true','yes']
         if _redis_client and cache_key and not no_cache:
             try:
                 cached = _redis_client.get(cache_key)
@@ -800,14 +804,16 @@ def generate_capsules():
             'message': 'Capsules generated successfully'
         }
 
-        # Сохраняем в кэш
-        if _redis_client and cache_key:
+        # Сохраняем в кэш (только если не force_refresh)
+        if _redis_client and cache_key and not no_cache:
             try:
                 ttl = getattr(Config, 'REDIS_TTL', 6 * 60 * 60)
                 _redis_client.setex(cache_key, ttl, json.dumps(response_obj, ensure_ascii=False))
                 print(f"🟡 CACHE SET: {cache_key} ttl={ttl}")
             except Exception:
                 print(f"⚠️ CACHE ERROR (write): {cache_key}")
+        elif no_cache:
+            print("⛔ force_refresh=true — кэш не сохраняется")
 
         return jsonify(response_obj)
         

@@ -599,21 +599,47 @@ def supplement_capsules_with_brand_items(
             if cat not in brand_by_category or not brand_by_category[cat]:
                 continue
             
-            # Берем товар, который использовался меньше всего
-            available = [item for item in brand_by_category[cat] if item_usage_count[item['id']] < 2]
-            if not available:
-                # Если все товары использовались 2+ раза, берем наименее используемые
-                available = brand_by_category[cat]
+            # Определяем, обязательная ли это категория (верх, низ, обувь, сумка)
+            is_required = cat in ['tops', 'bottoms', 'shoes', 'bags']
             
-            # Выбираем товар с минимальным количеством использований
-            # Приоритет вещам пользователя (is_brand_item=False)
-            item = min(available, key=lambda x: (
-                item_usage_count[x['id']],  # Локальные использования
-                x.get('is_brand_item', True),  # Приоритет вещам пользователя (False < True)
-                x.get('impressions_count', 0)  # Глобальные показы
-            ))
+            # Берем товар, который ЕЩЕ НЕ использовался (только 1 раз!)
+            available = [item for item in brand_by_category[cat] if item_usage_count[item['id']] == 0]
+            
+            # Если все товары использованы, но категория обязательная - разрешаем повторное использование
+            if not available and is_required:
+                # Для обязательных категорий разрешаем повторное использование (выбираем наименее использованный)
+                available = brand_by_category[cat]
+                print(f"  ⚠️ Все товары категории {cat} уже использованы, но категория обязательная - разрешаем повтор")
+            
+            if not available:
+                # Если категория необязательная (аксессуары) и все товары использованы - пропускаем
+                print(f"  ⚠️ Все товары категории {cat} уже использованы, пропускаем")
+                continue
+            
+            # Выбираем товар
+            if len(available) == 1:
+                item = available[0]
+            else:
+                # Приоритет вещам пользователя (is_brand_item=False)
+                user_items = [item for item in available if not item.get('is_brand_item', True)]
+                if user_items:
+                    # Выбираем случайный из вещей пользователя
+                    item = random.choice(user_items)
+                else:
+                    # Для обязательных категорий - выбираем случайный для разнообразия
+                    # Для необязательных - выбираем наименее использованный
+                    if is_required:
+                        item = random.choice(available)  # Случайный для разнообразия
+                    else:
+                        # Выбираем наименее использованный товар бренда
+                        item = min(available, key=lambda x: (
+                            item_usage_count[x['id']],  # Минимальное использование
+                            x.get('impressions_count', 0)  # Глобальные показы
+                        ))
+            
             capsule_items.append(item)
             item_usage_count[item['id']] += 1
+            used_items.add(item['id'])  # Помечаем как использованный
         
         if capsule_items:
             new_capsule = {
@@ -659,5 +685,40 @@ def supplement_capsules_with_brand_items(
                 print(f"      • {item['name']} ({item['category']}) - {item['description']}")
     else:
         print(f"  ⚠️ Вещи пользователя не были использованы в капсулах")
+    
+    # СТАТИСТИКА ИСПОЛЬЗОВАНИЯ ТОВАРОВ БРЕНДОВ
+    brand_items_usage = {item_id: count for item_id, count in item_usage_count.items() 
+                        if any(item.get('id') == item_id and item.get('is_brand_item', True) 
+                              for cat_items in brand_by_category.values() for item in cat_items)}
+    
+    if brand_items_usage:
+        print(f"\n  📈 СТАТИСТИКА ИСПОЛЬЗОВАНИЯ ТОВАРОВ БРЕНДОВ:")
+        sorted_usage = sorted(brand_items_usage.items(), key=lambda x: x[1], reverse=True)
+        duplicates = [item for item in sorted_usage if item[1] > 1]
+        
+        if duplicates:
+            print(f"  ⚠️ ТОВАРЫ БРЕНДОВ, ИСПОЛЬЗОВАННЫЕ БОЛЕЕ 1 РАЗА ({len(duplicates)} товаров):")
+            for item_id, count in duplicates[:20]:  # Показываем первые 20
+                # Находим описание товара
+                item_desc = "Неизвестно"
+                for cat_items in brand_by_category.values():
+                    for item in cat_items:
+                        if str(item.get('id')) == str(item_id) and item.get('is_brand_item', True):
+                            item_desc = item.get('description', 'Нет описания')[:50]
+                            break
+                    if item_desc != "Неизвестно":
+                        break
+                print(f"      - ID {item_id}: {count} раз(а) - {item_desc}")
+        else:
+            print(f"  ✅ Все товары брендов использованы по 1 разу (нет дубликатов)")
+        
+        # Общая статистика
+        total_uses = sum(brand_items_usage.values())
+        avg_uses = total_uses / len(brand_items_usage) if brand_items_usage else 0
+        max_uses = max(brand_items_usage.values()) if brand_items_usage else 0
+        print(f"  📊 Всего использований товаров брендов: {total_uses}")
+        print(f"  📊 Среднее использование: {avg_uses:.2f} раз на товар")
+        print(f"  📊 Максимальное использование: {max_uses} раз")
+        print(f"  📊 Уникальных товаров брендов использовано: {len(brand_items_usage)}")
     
     return user_capsules + new_capsules

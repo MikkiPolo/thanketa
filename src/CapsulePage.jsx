@@ -419,12 +419,12 @@ const CapsulePage = ({ profile, onBack, initialCapsule = null, isFavoritesView =
   };
 
 
-  // Выбор предметов для превью с приоритетом и адаптивной вместимостью (4 или 9)
+  // Выбор предметов для превью с приоритетом (всегда максимум 8 для 2 колонок)
   const getPreviewItems = (items) => {
     if (!Array.isArray(items)) return [];
     const normalized = items.filter(Boolean);
     const total = normalized.length;
-    const capacity = total >= 5 ? 9 : 4;
+    const capacity = total >= 5 ? 8 : 4; // Всегда четное число для 2 колонок
 
     const toLower = (s) => (s || '').toLowerCase();
 
@@ -610,6 +610,11 @@ const CapsulePage = ({ profile, onBack, initialCapsule = null, isFavoritesView =
       
       // Показываем уведомление
       alert('Капсула удалена из избранного!');
+      
+      // Если это просмотр из избранного, возвращаемся назад
+      if (isFavoritesView) {
+        onBack();
+      }
     } catch (error) {
       console.error('Ошибка удаления из избранного:', error);
       alert('Ошибка при удалении из избранного. Попробуйте еще раз.');
@@ -617,6 +622,11 @@ const CapsulePage = ({ profile, onBack, initialCapsule = null, isFavoritesView =
   };
 
   const isInFavorites = (capsuleId) => {
+    // Если это просмотр из избранного, всегда возвращаем true
+    if (isFavoritesView) {
+      return true;
+    }
+    
     // Находим текущую капсулу по ID
     const currentCapsule = capsules?.find(cap => cap.id === capsuleId);
     if (!currentCapsule || !currentCapsule.items) return false;
@@ -1008,9 +1018,7 @@ const CapsulePage = ({ profile, onBack, initialCapsule = null, isFavoritesView =
                       // Impressions уже отправлены при загрузке капсул (см. useEffect выше)
                     }}
                   >
-                    <div className={`capsule-canvas-preview grid ${preview.length > 6 ? 'grid-3' : ''} ${
-                      preview.length >= 9 ? 'has-9-items' : 
-                      preview.length >= 8 ? 'has-8-items' : 
+                    <div className={`capsule-canvas-preview grid ${
                       preview.length >= 7 ? 'has-many-items' : ''
                     }`}>
                       {preview.map((it, index) => (
@@ -1027,9 +1035,23 @@ const CapsulePage = ({ profile, onBack, initialCapsule = null, isFavoritesView =
                           }}
                           style={{
                             cursor: it.is_brand_item ? 'pointer' : 'default',
-                            border: it.is_brand_item ? '1.5px solid rgba(0, 0, 0, 0.3)' : 'none',
+                            border: 'none',
                             borderRadius: it.is_brand_item ? '8px' : '0',
-                            overflow: 'hidden'
+                            overflow: 'hidden',
+                            boxShadow: it.is_brand_item ? '0 2px 6px rgba(0, 0, 0, 0.1), 0 4px 12px rgba(0, 0, 0, 0.05)' : 'none',
+                            transition: it.is_brand_item ? 'all 0.3s ease' : 'none'
+                          }}
+                          onMouseEnter={(e) => {
+                            if (it.is_brand_item) {
+                              e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15), 0 8px 20px rgba(0, 0, 0, 0.08)';
+                              e.currentTarget.style.transform = 'translateY(-2px)';
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            if (it.is_brand_item) {
+                              e.currentTarget.style.boxShadow = '0 2px 6px rgba(0, 0, 0, 0.1), 0 4px 12px rgba(0, 0, 0, 0.05)';
+                              e.currentTarget.style.transform = 'translateY(0)';
+                            }
                           }}
                         >
                           {(it.imageUrl || it.image_url) && (it.imageUrl || it.image_url) !== 'null' && (

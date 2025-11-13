@@ -1499,9 +1499,11 @@ html {
 
 .capsule-card {
   background: #FFFFFF !important;
-  border: 1.5px solid rgba(0, 0, 0, 0.3) !important;
+  border: none !important; /* Убираем черную рамку */
+  outline: none !important; /* Убираем outline */
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.1), 0 6px 20px rgba(0, 0, 0, 0.06) !important; /* Усиленный эффект парения */
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
   display: flex !important;
   flex-direction: column !important;
   align-items: stretch !important;
@@ -1511,13 +1513,14 @@ html {
   height: auto !important;
   padding: 8px !important;
   margin: 0 !important;
-  border-radius: 8px !important;
+  border-radius: 12px !important; /* Увеличиваем радиус для более мягкого вида */
   position: relative !important;
 }
 
 .capsule-card:hover {
-  background: rgba(0, 0, 0, 0.02);
-  border-color: rgba(0, 0, 0, 0.5);
+  background: #FFFFFF !important;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15), 0 10px 30px rgba(0, 0, 0, 0.1) !important; /* Еще более сильная тень при наведении */
+  transform: translateY(-3px) !important; /* Более заметное поднятие при наведении */
 }
 
 .capsule-canvas-preview {
@@ -1525,6 +1528,8 @@ html {
   width: 100% !important;
   background: #fff !important; /* белый холст */
   border-radius: 12px !important;
+  border: none !important; /* Убираем любую возможную рамку */
+  outline: none !important; /* Убираем outline */
   overflow: visible !important; /* разрешаем показ всех элементов */
   height: auto !important; /* автоматическая высота */
   min-height: 240px !important; /* УВЕЛИЧЕНО: с 200px до 240px для крупных иконок */
@@ -1535,45 +1540,30 @@ html {
 /* Невидимая grid-раскладка: без линий и рамок */
 .capsule-canvas-preview.grid {
   display: grid !important;
-  grid-template-columns: repeat(2, 1fr) !important; /* 1-4 вещей — 2x2, без видимых линий */
+  grid-template-columns: repeat(2, 1fr) !important; /* Всегда 2 колонки */
   align-items: center !important;
   justify-items: center !important;
   gap: 4px !important;           /* ИСПРАВЛЕНО: минимальное расстояние */
   padding: 4px !important;       /* ИСПРАВЛЕНО: минимальный отступ */
 }
 
-.capsule-canvas-preview.grid.grid-3 {
-  grid-template-columns: repeat(3, 1fr) !important;
-  grid-auto-rows: 1fr !important;
-}
-
 /* Классы для разного количества элементов - полностью автоматическая высота */
 .capsule-canvas-preview.grid.has-many-items {
-  min-height: 320px !important; /* УВЕЛИЧЕНО: с 280px до 320px */
-  height: auto !important;
-}
-
-.capsule-canvas-preview.grid.has-8-items {
-  min-height: 360px !important; /* УВЕЛИЧЕНО: с 320px до 360px */
-  height: auto !important;
-}
-
-.capsule-canvas-preview.grid.has-9-items {
-  min-height: 400px !important; /* УВЕЛИЧЕНО: с 360px до 400px */
+  min-height: 480px !important; /* УВЕЛИЧЕНО: с 400px до 480px для более крупных иконок (7-8 элементов в 2 колонках, 4 ряда по 120px) */
   height: auto !important;
 }
 
 .capsule-canvas-preview.grid .capsule-canvas-item {
   position: static !important;    /* позиции задает сетка */
   width: 100% !important;
-  height: 100px !important; /* УВЕЛИЧЕНО: с 80px до 100px для крупных иконок */
+  height: 120px !important; /* УВЕЛИЧЕНО: с 100px до 120px для более крупных иконок */
   background: transparent !important;
   margin: 0 !important; /* ИСПРАВЛЕНО: убираем отступы элементов */
 }
 
 .capsule-canvas-preview.grid .capsule-canvas-item img {
-  width: 95% !important; /* УВЕЛИЧЕНО: с 90% до 95% для крупных иконок */
-  height: 95% !important; /* УВЕЛИЧЕНО: с 90% до 95% для крупных иконок */
+  width: 98% !important; /* УВЕЛИЧЕНО: с 95% до 98% для более крупных иконок */
+  height: 98% !important; /* УВЕЛИЧЕНО: с 95% до 98% для более крупных иконок */
   object-fit: contain !important;
 }
 

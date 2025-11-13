@@ -113,7 +113,7 @@ const FavoritesPage = ({ telegramId, showNotification }) => {
             const outerSet = new Set(['пиджак','куртка','пальто','кардиган','жакет','жилет']);
 
             const items = (favorite.items || []).filter(Boolean);
-            const capacity = items.length >= 5 ? 9 : 4;
+            const capacity = items.length >= 5 ? 8 : 4; // Всегда четное число для 2 колонок
             const dresses = [], tops = [], bottoms = [], shoes = [], accessories = [], outerwear = [], rest = [];
             items.forEach(it => {
               const cat = toLower(it.category);
@@ -140,7 +140,7 @@ const FavoritesPage = ({ telegramId, showNotification }) => {
                 className="capsule-card"
                 onClick={() => setSelectedCapsule(favorite)}
               >
-                <div className={`capsule-canvas-preview grid ${picked.length > 6 ? 'grid-3' : ''}`}>
+                <div className="capsule-canvas-preview grid">
                   {picked.map((item, index) => (
                     <div key={index} className="capsule-canvas-item">
                       {(item.imageUrl || item.image_url) && (item.imageUrl || item.image_url) !== 'null' && (
@@ -159,6 +159,8 @@ const FavoritesPage = ({ telegramId, showNotification }) => {
               </div>
             );
           })}
+          {/* Пустая капсула-спейсер для предотвращения перекрытия навигацией */}
+          <div className="capsule-spacer"></div>
         </div>
       </div>
       

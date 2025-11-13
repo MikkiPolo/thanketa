@@ -311,23 +311,19 @@ def mix_brand_items_v5(
             if cat not in brand_by_category or not brand_by_category[cat]:
                 continue
             
-            # Выбираем товар
+            # Выбираем товар (ТОЛЬКО из неиспользованных!)
             available_brand_items = [
                 item for item in brand_by_category[cat]
                 if item['id'] not in used_brand_items
             ]
             
             if not available_brand_items:
-                # Все товары использованы, берем наименее использованный
-                available_brand_items = brand_by_category[cat]
+                # Все товары этой категории уже использованы - пропускаем эту замену
+                print(f"  ⚠️ Все товары категории {cat} уже использованы, пропускаем замену")
+                continue  # Пропускаем эту замену, пробуем следующую
             
-            brand_item = min(
-                available_brand_items,
-                key=lambda x: (
-                    brand_usage_count[x['id']],
-                    x.get('impressions_count', 0)
-                )
-            )
+            # Выбираем случайный из неиспользованных для разнообразия
+            brand_item = random.choice(available_brand_items)
             
             # Заменяем
             capsule['items'][idx_in_capsule] = brand_item
@@ -362,9 +358,12 @@ def mix_brand_items_v5(
             
             available = [item for item in brand_by_category[cat] if item['id'] not in used_brand_items]
             if not available:
-                available = brand_by_category[cat]
+                # Все товары этой категории использованы - пропускаем
+                print(f"  ⚠️ Все товары категории {cat} уже использованы для полной капсулы, пропускаем")
+                continue
             
-            item = min(available, key=lambda x: (brand_usage_count[x['id']], x.get('impressions_count', 0)))
+            # Выбираем случайный из неиспользованных
+            item = random.choice(available)
             capsule_items.append(item)
             used_brand_items.add(item['id'])
             brand_usage_count[item['id']] += 1
@@ -410,6 +409,37 @@ def mix_brand_items_v5(
     
     print(f"  📊 Итого подмешано {mixed_count} товаров брендов")
     print(f"  🔄 Использовано {len(used_brand_items)} уникальных товаров")
+    
+    # Детальная статистика использования товаров
+    if brand_usage_count:
+        print(f"\n  📈 СТАТИСТИКА ИСПОЛЬЗОВАНИЯ ТОВАРОВ БРЕНДОВ:")
+        # Сортируем по количеству использований (от большего к меньшему)
+        sorted_usage = sorted(brand_usage_count.items(), key=lambda x: x[1], reverse=True)
+        duplicates = [item for item in sorted_usage if item[1] > 1]
+        
+        if duplicates:
+            print(f"  ⚠️ ТОВАРЫ, ИСПОЛЬЗОВАННЫЕ БОЛЕЕ 1 РАЗА ({len(duplicates)} товаров):")
+            for item_id, count in duplicates[:20]:  # Показываем первые 20
+                # Находим описание товара
+                item_desc = "Неизвестно"
+                for cat_items in brand_by_category.values():
+                    for item in cat_items:
+                        if str(item['id']) == str(item_id):
+                            item_desc = item.get('description', 'Нет описания')[:50]
+                            break
+                    if item_desc != "Неизвестно":
+                        break
+                print(f"      - ID {item_id}: {count} раз(а) - {item_desc}")
+        else:
+            print(f"  ✅ Все товары использованы по 1 разу (нет дубликатов)")
+        
+        # Общая статистика
+        total_uses = sum(brand_usage_count.values())
+        avg_uses = total_uses / len(brand_usage_count) if brand_usage_count else 0
+        max_uses = max(brand_usage_count.values()) if brand_usage_count else 0
+        print(f"  📊 Всего использований: {total_uses}")
+        print(f"  📊 Среднее использование: {avg_uses:.2f} раз на товар")
+        print(f"  📊 Максимальное использование: {max_uses} раз")
     
     return result_capsules
 

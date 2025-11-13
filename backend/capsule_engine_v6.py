@@ -29,6 +29,7 @@ Capsule Engine V6 - ПОЛНАЯ АДАПТАЦИЯ ПОД ИНСТРУКЦИЮ 
 """
 
 import random
+import time
 from typing import List, Dict, Any, Optional, Set
 from collections import deque, defaultdict
 from dataclasses import dataclass
@@ -379,8 +380,54 @@ def is_suitable_for_temp_and_season(item: Dict[str, Any], temp_c: float, season:
             return False
         return True
     
-    # ВСЕСЕЗОННЫЕ вещи - всегда проходят
-    if 'всесезон' in item_season:
+    # ВЕРХ ИЗ ДЖИНСЫ - только от +15°C (легкий верх)
+    if item_cat == 'tops':
+        # Проверяем, содержит ли вещь джинсовую ткань (деним, джинс)
+        if any(word in desc for word in ['деним', 'джинс', 'denim', 'jeans']):
+            if temp_c < 15.0:
+                print(f"  ❌ Верх из джинсы отфильтрован: {desc[:50]} (легкий верх при {temp_c}°C, нужна температура ≥15°C)")
+                return False
+    
+    # ДЖИНСОВЫЕ КУРТКИ - только от +15°C (легкая верхняя одежда)
+    if item_cat in ['outerwear', 'light_outerwear']:
+        # Проверяем, содержит ли вещь джинсовую ткань (деним, джинс) и является ли курткой
+        if any(word in desc for word in ['деним', 'джинс', 'denim', 'jeans']) and any(word in desc for word in ['куртк', 'jacket']):
+            if temp_c < 15.0:
+                print(f"  ❌ Джинсовая куртка отфильтрована: {desc[:50]} (легкая верхняя одежда при {temp_c}°C, нужна температура ≥15°C)")
+                return False
+    
+    # ОБУВЬ - специальная проверка по температуре (ПЕРЕД проверкой на всесезонность!)
+    if item_cat == 'shoes':
+        # Легкая обувь (туфли, балетки, сандалии) - только для тепла
+        light_shoes = ['туфл', 'балетк', 'сандал', 'босоножк', 'шлепк', 'сланц']
+        if any(word in desc for word in light_shoes):
+            # Туфли/балетки/сандалии - только при ≥15°C
+            if temp_c < 15.0:
+                print(f"  ❌ Обувь отфильтрована: {desc[:50]} (легкая обувь при {temp_c}°C)")
+                return False
+        
+        # Полуботинки, ботинки, сапоги - для прохлады и холода
+        warm_shoes = ['ботинк', 'сапог', 'полуботинк', 'ботильон']
+        if any(word in desc for word in warm_shoes):
+            # Ботинки/сапоги - подходят для <20°C
+            if temp_c >= 20.0:
+                print(f"  ❌ Обувь отфильтрована: {desc[:50]} (теплая обувь при {temp_c}°C)")
+                return False
+        
+        # Кроссовки, кеды, мокасины - проверяем по температуре
+        casual_shoes = ['кроссовк', 'кеды', 'мокасин', 'лофер']
+        if any(word in desc for word in casual_shoes):
+            # Кроссовки/кеды/мокасины - подходят для 10-25°C (включительно)
+            # При 10°C они НЕ должны показываться - нужны ботинки/полуботинки
+            if temp_c <= 10.0 or temp_c >= 25.0:
+                print(f"  ❌ Обувь отфильтрована: {desc[:50]} (casual обувь при {temp_c}°C, нужен диапазон >10-25°C)")
+                return False
+        
+        # Если обувь прошла проверку по типу - продолжаем проверку тканей и сезона
+        # (не возвращаем True сразу, чтобы проверить ткани)
+    
+    # ВСЕСЕЗОННЫЕ вещи - всегда проходят (НО НЕ ОБУВЬ - она уже проверена выше!)
+    if 'всесезон' in item_season and item_cat != 'shoes':
         return True
     
     # ТКАНИ - новая логика!
@@ -406,7 +453,11 @@ def is_suitable_for_temp_and_season(item: Dict[str, Any], temp_c: float, season:
         return temp_c >= 22.0 or 'лет' in season.lower()
     
     # Если сезонность не указана - пропускаем (всесезонная вещь)
+    # НО для обуви это не применяется - она уже проверена выше!
     if not item_season:
+        if item_cat == 'shoes':
+            # Для обуви без сезона - проверяем только по типу (уже сделано выше)
+            return True
         return True
     
     return False
@@ -491,9 +542,17 @@ def generate_capsules(
             if items:
                 print(f"   - {cat}: {len(items)} шт. (примеры: {', '.join(items[:3])})")
     
-    # Перемешиваем для разнообразия
+    # Устанавливаем seed для рандомизации на основе времени
+    # Это обеспечивает разнообразие при каждой генерации
+    random.seed(int(time.time() * 1000) % (2**32))  # Используем миллисекунды для уникальности
+    
+    # Перемешиваем для разнообразия (теперь с уникальным seed)
     for key in ['tops', 'bottoms', 'dresses', 'outerwear', 'light_outerwear', 'shoes', 'bags']:
         random.shuffle(by_category[key])
+    
+    # Дополнительное перемешивание аксессуаров
+    for subtype, items in accessories_by_subtype.items():
+        random.shuffle(items)
     
     # Создаем очереди
     tops_q = deque(by_category['tops'])
@@ -516,8 +575,8 @@ def generate_capsules(
     watch_q = deque(accessories_by_subtype.get('watch', []))
     sunglasses_q = deque(accessories_by_subtype.get('sunglasses', []))
     
-    # Трекинг использования (ЦИКЛИЧЕСКИЙ - БЕЗ лимита!)
-    used_count = defaultdict(int)
+    # Трекинг использования (ОГРАНИЧЕНО ДО 1 РАЗА!)
+    used_items = set()  # Множество использованных ID вещей
     produced_keys = set()
     capsules = []
     
@@ -530,38 +589,36 @@ def generate_capsules(
     
     # Вспомогательные функции
     def mark_used(item: Dict[str, Any]) -> None:
-        used_count[str(item['id'])] += 1
+        """Помечает вещь как использованную (только 1 раз!)"""
+        used_items.add(str(item['id']))
     
     def pick_from_queue(q: deque) -> Optional[Dict[str, Any]]:
         """
-        ЦИКЛИЧЕСКОЕ использование: приоритизируем менее использованные вещи
-        БЕЗ ЛИМИТА - вещи используются бесконечно!
+        Выбор вещи из очереди с ограничением: каждая вещь используется ТОЛЬКО 1 РАЗ
+        С РАНДОМИЗАЦИЕЙ для разнообразия
         """
         if not q:
             return None
         
-        # Ищем вещь с МИНИМАЛЬНЫМ использованием
-        best_item = None
-        best_count = float('inf')
+        # Собираем все НЕ использованные вещи
+        unused_candidates = []
         
         for _ in range(len(q)):
             it = q.popleft()
-            item_count = used_count[str(it['id'])]
+            item_id = str(it['id'])
             
-            # Если вещь вообще не использовалась - берем сразу
-            if item_count == 0:
-                q.append(it)
-                return it
-            
-            # Запоминаем вещь с минимальным использованием
-            if item_count < best_count:
-                best_item = it
-                best_count = item_count
+            # Если вещь еще не использовалась - добавляем в кандидаты
+            if item_id not in used_items:
+                unused_candidates.append(it)
             
             q.append(it)
         
-        # Возвращаем вещь с минимальным использованием (даже если она уже использовалась много раз!)
-        return best_item
+        if not unused_candidates:
+            return None  # Все вещи уже использованы
+        
+        # Выбираем случайную из неиспользованных для разнообразия
+        selected = random.choice(unused_candidates)
+        return selected
     
     def get_capsule_key(items: List[Dict[str, Any]]) -> str:
         return '_'.join(sorted(str(i['id']) for i in items))
