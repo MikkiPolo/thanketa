@@ -471,8 +471,8 @@ export default function App() {
           <div className="card login-card">
             <div className="login-content">
               <div className="login-header">
-                <div className="logo" style={{ marginTop: "1rem", marginBottom: "1.5rem" }}>
-                  <img src={theme === 'dark' ? "/vite1.svg" : "/vite.svg"} alt="logo" className="logo-img" />
+                <div className="logo" style={{ marginTop: "1rem", marginBottom: "1.5rem", width: "100%", maxWidth: "280px", marginLeft: "auto", marginRight: "auto" }}>
+                  <img src={theme === 'dark' ? "/vite1.svg" : "/vite.svg"} alt="logo" className="logo-img" style={{ width: "100%", height: "auto", minHeight: "80px" }} />
                 </div>
                 <p className="login-subtitle">Вход в приложение</p>
               </div>
