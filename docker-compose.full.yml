@@ -24,6 +24,7 @@ services:
       - CACHE_TTL=86400
       - GUNICORN_WORKERS=4
       - GUNICORN_THREADS=6
+      - REDIS_URL=redis://redis:6379
     networks:
       - wardrobe-network
 
