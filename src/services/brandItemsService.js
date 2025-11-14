@@ -177,7 +177,7 @@ class BrandItemsService {
     if (item.shop_link) {
       try {
         window.open(item.shop_link, '_blank', 'noopener,noreferrer');
-        console.log(`🔗 Opened shop link: ${item.shop_link}`);
+        // Shop link opened (логирование отключено)
       } catch (error) {
         console.error('❌ Error opening shop link:', error);
       }
@@ -265,7 +265,7 @@ class BrandItemsService {
    */
   async testConnection() {
     try {
-      console.log('🧪 Testing Supabase connection...');
+      // Testing Supabase connection
       
       const { data, error } = await supabase
         .from('brand_items')

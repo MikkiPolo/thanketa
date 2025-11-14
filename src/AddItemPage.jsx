@@ -122,7 +122,7 @@ const AddItemPage = ({ telegramId, onItemAdded, onClose }) => {
       
       // Проверяем размер сжатого файла
       if (compressedBlob.size > 5 * 1024 * 1024) { // 5MB
-        console.warn('Compressed image is still too large:', compressedBlob.size);
+        // Compressed image is still too large (не критично)
         // Дополнительное сжатие
         const furtherCompressedBlob = await compressImage(compressedBlob, 400, 0.4);
         await wardrobeService.uploadImage(telegramId, imageId, furtherCompressedBlob);
