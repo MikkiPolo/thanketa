@@ -30,6 +30,8 @@ import { normalizeText, validateAge, cleanAge } from './utils/textUtils';
 // удален дублирующийся массив questions вне компонента
 
 export default function App() {
+  console.log('🚀 App компонент начал рендеринг');
+  
   const [step, setStep] = useState(0);
   const [form, setForm] = useState({});
   const [currentPage, setCurrentPage] = useState('home');
@@ -37,6 +39,8 @@ export default function App() {
   const [tgId, setTgId] = useState(null);
   const [existingProfile, setExistingProfile] = useState(null);
   const [loading, setLoading] = useState(true);
+  
+  console.log('📊 App состояние инициализировано:', { tgId, loading, step });
   const [started, setStarted] = useState(false);
   const [viewing, setViewing] = useState(false);
   const [editing, setEditing] = useState(false);
