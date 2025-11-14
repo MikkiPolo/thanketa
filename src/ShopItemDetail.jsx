@@ -109,10 +109,6 @@ const ShopItemDetail = ({ item, telegramId, onBack }) => {
 
     try {
       // Начинаем добавление товара в гардероб
-        category: item.category,
-        season: item.season,
-        telegramId: telegramId
-      });
 
       // 1. Скачиваем изображение
       const imageBlob = await downloadImage(item.image_url);
