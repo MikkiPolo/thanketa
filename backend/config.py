@@ -32,7 +32,7 @@ class Config:
     
     # Кэширование
     ENABLE_CACHE = os.getenv('ENABLE_CACHE', 'true').lower() == 'true'
-    CACHE_TTL = int(os.getenv('CACHE_TTL', '3600'))  # 1 час
+    CACHE_TTL = int(os.getenv('CACHE_TTL', '86400'))  # 24 часа (было 1 час)
     
     # Redis настройки
     REDIS_URL = os.getenv('REDIS_URL', 'redis://localhost:6379')

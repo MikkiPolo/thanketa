@@ -43,9 +43,9 @@ services:
       - USE_FALLBACK_GENERATION=true
       - LOG_LEVEL=INFO
       - ENABLE_CACHE=true
-      - CACHE_TTL=3600
-      - GUNICORN_WORKERS=1
-      - GUNICORN_THREADS=4
+      - CACHE_TTL=86400
+      - GUNICORN_WORKERS=4
+      - GUNICORN_THREADS=6
     depends_on:
       - ollama
     networks:

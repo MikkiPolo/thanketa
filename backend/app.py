@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, send_file
+from flask import Flask, request, jsonify, send_file, Response
 from flask_cors import CORS
 try:
     # Используем явную сессию и тюним маттинг для более качественной сегментации
@@ -807,7 +807,8 @@ def generate_capsules():
         # Сохраняем в кэш (только если не force_refresh)
         if _redis_client and cache_key and not no_cache:
             try:
-                ttl = getattr(Config, 'REDIS_TTL', 6 * 60 * 60)
+                # Используем REDIS_TTL (24 часа) вместо CACHE_TTL для капсул
+                ttl = getattr(Config, 'REDIS_TTL', 86400)  # 24 часа
                 _redis_client.setex(cache_key, ttl, json.dumps(response_obj, ensure_ascii=False))
                 print(f"🟡 CACHE SET: {cache_key} ttl={ttl}")
             except Exception:
@@ -1758,6 +1759,999 @@ def generate_looks():
     except Exception as e:
         print(f"❌ Ошибка формирования луков: {e}")
         return jsonify({ 'looks': [] }), 200
+
+def handle_tool_call(tool_name: str, tool_args: dict, telegram_id: str, openai_client) -> str:
+    """
+    Обработка вызовов инструментов ассистента
+    
+    Args:
+        tool_name: название инструмента
+        tool_args: аргументы инструмента
+        telegram_id: ID пользователя
+        openai_client: клиент OpenAI
+    
+    Returns:
+        JSON строка с результатом выполнения инструмента
+    """
+    try:
+        from brand_service_v4 import get_supabase_client
+        supabase = get_supabase_client()
+        
+        if tool_name == 'about_user':
+            # Получаем данные пользователя
+            if not supabase:
+                return json.dumps({"error": "Supabase не доступен"})
+            
+            profile_response = supabase.table('user_profile').select('*').eq('telegram_id', telegram_id).execute()
+            if profile_response.data:
+                profile = profile_response.data[0]
+                return json.dumps({
+                    "figura": profile.get('figura', 'не указано'),
+                    "cvetotip": profile.get('cvetotip', 'не указано'),
+                    "stil_zhizni": profile.get('stil_zhizni', 'не указано'),
+                    "celi": profile.get('celi', 'не указано'),
+                    "predpochtenia": profile.get('predpochtenia', 'не указано'),
+                    "name": profile.get('name', 'не указано'),
+                    "age": profile.get('age', 'не указано')
+                }, ensure_ascii=False)
+            else:
+                return json.dumps({"error": "Профиль не найден"})
+        
+        elif tool_name == 'wardrobe':
+            # Получаем гардероб пользователя
+            if not supabase:
+                return json.dumps({"error": "Supabase не доступен"})
+            
+            wardrobe_response = supabase.table('wardrobe').select('id, category, description, season').eq('telegram_id', telegram_id).execute()
+            if wardrobe_response.data:
+                wardrobe_items = wardrobe_response.data[:100]  # Ограничиваем до 100 вещей
+                return json.dumps({
+                    "items": [
+                        {
+                            "id": str(item.get('id', '')),
+                            "category": item.get('category', ''),
+                            "description": item.get('description', ''),
+                            "season": item.get('season', '')
+                        }
+                        for item in wardrobe_items
+                    ],
+                    "count": len(wardrobe_items)
+                }, ensure_ascii=False)
+            else:
+                return json.dumps({"items": [], "count": 0})
+        
+        elif tool_name == 'get_weather':
+            # Получаем погоду по координатам из профиля (как на главной странице)
+            if not supabase:
+                return json.dumps({"error": "Supabase не доступен"})
+            
+            try:
+                # Получаем профиль пользователя с координатами
+                profile_response = supabase.table('user_profile').select('*').eq('telegram_id', telegram_id).execute()
+                if not profile_response.data:
+                    return json.dumps({
+                        "error": "Профиль пользователя не найден. Пожалуйста, укажите температуру вручную."
+                    }, ensure_ascii=False)
+                
+                profile = profile_response.data[0]
+                location_latitude = profile.get('location_latitude')
+                location_longitude = profile.get('location_longitude')
+                
+                # Проверяем наличие координат
+                if not location_latitude or not location_longitude:
+                    return json.dumps({
+                        "error": "Координаты не указаны в профиле. Пожалуйста, укажите температуру вручную или добавьте геолокацию в профиль."
+                    }, ensure_ascii=False)
+                
+                # Получаем погоду через OpenWeatherMap API (как на главной странице)
+                import requests
+                api_key = 'd69e489c7ddeb793bff2350cc232dab7'
+                weather_url = f"https://api.openweathermap.org/data/2.5/weather?lat={location_latitude}&lon={location_longitude}&appid={api_key}&units=metric&lang=ru"
+                
+                print(f"   🌤️ Запрос погоды для координат: lat={location_latitude}, lon={location_longitude}", flush=True)
+                
+                weather_response = requests.get(weather_url, timeout=10)
+                
+                if weather_response.status_code == 200:
+                    weather_data = weather_response.json()
+                    
+                    # Формируем ответ в удобном формате
+                    result = {
+                        "temperature": round(weather_data.get('main', {}).get('temp', 20), 1),
+                        "feels_like": round(weather_data.get('main', {}).get('feels_like', 20), 1),
+                        "temp_max": round(weather_data.get('main', {}).get('temp_max', 20), 1),
+                        "temp_min": round(weather_data.get('main', {}).get('temp_min', 20), 1),
+                        "humidity": weather_data.get('main', {}).get('humidity', 0),
+                        "description": weather_data.get('weather', [{}])[0].get('description', 'ясно') if weather_data.get('weather') else 'ясно',
+                        "main_condition": weather_data.get('weather', [{}])[0].get('main', 'Clear') if weather_data.get('weather') else 'Clear',
+                        "city": weather_data.get('name', 'Неизвестно'),
+                        "country": weather_data.get('sys', {}).get('country', ''),
+                        "full_data": weather_data  # Полные данные для совместимости
+                    }
+                    
+                    print(f"   ✅ Погода получена: {result['temperature']}°C, {result['description']}", flush=True)
+                    
+                    return json.dumps(result, ensure_ascii=False)
+                else:
+                    error_msg = f"Ошибка получения погоды: HTTP {weather_response.status_code}"
+                    print(f"   ⚠️ {error_msg}", flush=True)
+                    return json.dumps({
+                        "error": error_msg
+                    }, ensure_ascii=False)
+                    
+            except requests.exceptions.RequestException as e:
+                error_msg = f"Ошибка запроса к API погоды: {str(e)}"
+                print(f"   ⚠️ {error_msg}", flush=True)
+                return json.dumps({
+                    "error": error_msg
+                }, ensure_ascii=False)
+            except Exception as e:
+                error_msg = f"Ошибка получения погоды: {str(e)}"
+                print(f"   ⚠️ {error_msg}", flush=True)
+                import traceback
+                traceback.print_exc()
+                return json.dumps({
+                    "error": error_msg
+                }, ensure_ascii=False)
+        
+        elif tool_name == 'recommend':
+            # Рекомендации товаров брендов
+            if not supabase:
+                return json.dumps({"error": "Supabase не доступен"})
+            
+            season = tool_args.get('season', 'Всесезонно')
+            category = tool_args.get('category', None)
+            
+            query = supabase.table('brand_items').select('id, brand_id, category, season, description, image_id, shop_link, price, currency').eq('is_approved', True).eq('is_active', True)
+            
+            if season and season != 'Всесезонно':
+                query = query.eq('season', season)
+            
+            if category:
+                query = query.eq('category', category)
+            
+            response = query.limit(20).execute()
+            items = response.data if response.data else []
+            
+            # Формируем image_url
+            for item in items:
+                if item.get('image_id') and item.get('brand_id'):
+                    item['image_url'] = f"https://lipolo.store/storage/v1/object/public/brand-items-images/{item['brand_id']}/{item['image_id']}.jpg"
+                else:
+                    item['image_url'] = None
+            
+            return json.dumps({
+                "items": [
+                    {
+                        "id": str(item.get('id', '')),
+                        "category": item.get('category', ''),
+                        "description": item.get('description', ''),
+                        "season": item.get('season', ''),
+                        "image_url": item.get('image_url', ''),
+                        "shop_link": item.get('shop_link', ''),
+                        "price": item.get('price', ''),
+                        "currency": item.get('currency', '')
+                    }
+                    for item in items
+                ],
+                "count": len(items)
+            }, ensure_ascii=False)
+        
+        elif tool_name == 'search_web':
+            # Поиск в интернете (пока заглушка)
+            query = tool_args.get('query', '')
+            return json.dumps({
+                "query": query,
+                "results": [],
+                "note": "Поиск в интернете пока не реализован. Используйте инструмент recommend для поиска товаров."
+            }, ensure_ascii=False)
+        
+        else:
+            return json.dumps({"error": f"Неизвестный инструмент: {tool_name}"})
+    
+    except Exception as e:
+        print(f"⚠️ Ошибка обработки инструмента {tool_name}: {e}", flush=True)
+        import traceback
+        traceback.print_exc()
+        return json.dumps({"error": str(e)})
+
+@app.route('/convert-heic-preview', methods=['POST', 'OPTIONS'])
+def convert_heic_preview():
+    """Конвертирует HEIC файл в JPEG для превью"""
+    if request.method == 'OPTIONS':
+        response = jsonify({})
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
+        response.headers.add('Access-Control-Allow-Methods', 'POST, OPTIONS')
+        return response
+    
+    try:
+        if 'image' not in request.files:
+            return jsonify({'error': 'No image file provided'}), 400
+        
+        image_file = request.files['image']
+        if not image_file or not image_file.filename:
+            return jsonify({'error': 'No image file provided'}), 400
+        
+        # Проверяем, что это HEIC файл
+        filename_lower = image_file.filename.lower()
+        if not filename_lower.endswith(('.heic', '.heif')):
+            return jsonify({'error': 'File is not HEIC/HEIF'}), 400
+        
+        # Обрабатываем HEIC файл
+        image_file.seek(0)
+        
+        # Регистрируем HEIC opener
+        try:
+            import pillow_heif
+            pillow_heif.register_heif_opener()
+        except ImportError:
+            return jsonify({'error': 'HEIC support not available'}), 500
+        
+        # Открываем изображение
+        img = Image.open(image_file)
+        
+        # Уменьшаем размер для превью (максимум 800px по большей стороне)
+        max_size = 800
+        if max(img.size) > max_size:
+            img.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
+        
+        # Конвертируем в RGB если нужно
+        if img.mode != 'RGB':
+            img = img.convert('RGB')
+        
+        # Сохраняем в JPEG с хорошим качеством для превью
+        buffer = io.BytesIO()
+        img.save(buffer, format='JPEG', quality=85, optimize=True)
+        buffer.seek(0)
+        
+        # Конвертируем в base64
+        image_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
+        
+        return jsonify({
+            'success': True,
+            'preview': f'data:image/jpeg;base64,{image_base64}'
+        })
+        
+    except Exception as e:
+        print(f"⚠️ Ошибка конвертации HEIC для превью: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/chat-style', methods=['POST', 'OPTIONS'])
+def chat_style():
+    """
+    Чат с AI-стилистом через OpenAI Assistants API
+    
+    Поддерживает:
+    - Текстовые сообщения
+    - Загрузку изображений
+    - Streaming ответов
+    - Контекст пользователя (анкета + гардероб по запросу)
+    
+    Body (multipart/form-data или JSON):
+    - message: текст сообщения
+    - telegram_id: ID пользователя в Telegram
+    - thread_id: (опционально) ID thread для продолжения разговора
+    - image: (опционально) файл изображения
+    - include_wardrobe: (опционально) включить гардероб в контекст
+    """
+    try:
+        if request.method == 'OPTIONS':
+            return ('', 204)
+        
+        # Получаем данные (поддерживаем и form-data и JSON)
+        json_data = None
+        try:
+            json_data = request.get_json(force=True, silent=True) or {}
+        except:
+            json_data = {}
+        
+        telegram_id = request.form.get('telegram_id') or json_data.get('telegram_id')
+        if not telegram_id:
+            return jsonify({'error': 'telegram_id is required'}), 400
+        
+        message = request.form.get('message') or json_data.get('message', '')
+        thread_id = request.form.get('thread_id') or json_data.get('thread_id')
+        include_wardrobe = request.form.get('include_wardrobe', 'false').lower() == 'true' or json_data.get('include_wardrobe', False)
+        
+        # Получаем изображение, если есть
+        image_file = None
+        image_base64 = None
+        if 'image' in request.files:
+            image_file = request.files['image']
+            if image_file and image_file.filename:
+                # Конвертируем в base64
+                try:
+                    # Правильно обрабатываем файл из Flask request.files
+                    # image_file - это FileStorage объект, нужно использовать его напрямую
+                    # Сбрасываем позицию потока на начало
+                    image_file.seek(0)
+                    
+                    # Проверяем формат файла
+                    filename_lower = image_file.filename.lower()
+                    is_heic = filename_lower.endswith(('.heic', '.heif'))
+                    
+                    if is_heic:
+                        print(f"📸 Обнаружен HEIC файл: {image_file.filename}")
+                        # Для HEIC нужно использовать pillow-heif
+                        try:
+                            import pillow_heif
+                            pillow_heif.register_heif_opener()
+                            print("✅ HEIC opener зарегистрирован")
+                        except ImportError:
+                            print("⚠️ pillow-heif не установлен, пытаемся открыть как обычное изображение")
+                    
+                    img = Image.open(image_file)
+                    print(f"✅ Изображение открыто: {img.format}, размер: {img.size}, режим: {img.mode}")
+                    
+                    # Уменьшаем размер изображения для чата (OpenAI имеет ограничения)
+                    max_size = 1024  # Максимальный размер стороны
+                    if max(img.size) > max_size:
+                        img.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
+                        print(f"📐 Изображение уменьшено до: {img.size}")
+                    
+                    # Конвертируем в RGB если нужно
+                    if img.mode != 'RGB':
+                        img = img.convert('RGB')
+                    
+                    # Сохраняем с меньшим качеством для уменьшения размера
+                    buffer = io.BytesIO()
+                    img.save(buffer, format='JPEG', quality=75, optimize=True)
+                    buffer.seek(0)
+                    image_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
+                    print(f"✅ Изображение конвертировано в base64, размер: {len(image_base64)} символов ({len(image_base64) / 1024 / 1024:.2f} MB)")
+                except Exception as e:
+                    print(f"⚠️ Ошибка обработки изображения: {e}")
+                    import traceback
+                    traceback.print_exc()
+        
+        # Получаем OpenAI API ключ
+        api_key = os.getenv('OPENAI_API_KEY')
+        if not api_key:
+            return jsonify({'error': 'OPENAI_API_KEY not configured'}), 500
+        
+        client = openai.OpenAI(api_key=api_key)
+        assistant_id = 'asst_mn2FIw7vNCgGbnuud4m71BUN'
+        
+        # Получаем данные пользователя из Supabase
+        user_context = ""
+        try:
+            from brand_service_v4 import get_supabase_client
+            supabase = get_supabase_client()
+            if supabase:
+                # Получаем профиль пользователя
+                profile_response = supabase.table('user_profile').select('*').eq('telegram_id', telegram_id).execute()
+                if profile_response.data:
+                    profile = profile_response.data[0]
+                    user_context = f"""
+Данные пользователя из анкеты:
+- Фигура: {profile.get('figura', 'не указано')}
+- Цветотип: {profile.get('cvetotip', 'не указано')}
+- Стиль жизни: {profile.get('stil_zhizni', 'не указано')}
+- Цели: {profile.get('celi', 'не указано')}
+- Предпочтения: {profile.get('predpochtenia', 'не указано')}
+"""
+                
+                # Получаем гардероб, если запрошен
+                if include_wardrobe:
+                    wardrobe_response = supabase.table('wardrobe').select('id, category, description, season').eq('telegram_id', telegram_id).execute()
+                    if wardrobe_response.data:
+                        wardrobe_items = wardrobe_response.data
+                        user_context += f"\nГардероб пользователя ({len(wardrobe_items)} вещей):\n"
+                        for item in wardrobe_items[:50]:  # Ограничиваем до 50 вещей
+                            user_context += f"- {item.get('category', '')}: {item.get('description', '')[:100]}\n"
+        except Exception as e:
+            print(f"⚠️ Ошибка получения данных пользователя: {e}")
+        
+        # Создаем или получаем thread
+        if not thread_id:
+            thread = client.beta.threads.create()
+            thread_id = thread.id
+        else:
+            # Проверяем существование thread и активные runs
+            try:
+                thread = client.beta.threads.retrieve(thread_id)
+                
+                # Проверяем активные runs в thread
+                runs = client.beta.threads.runs.list(thread_id=thread_id, limit=1)
+                active_runs = [run for run in runs.data if run.status in ['queued', 'in_progress', 'requires_action']]
+                
+                if active_runs:
+                    print(f"⚠️ Найден активный run {active_runs[0].id}, отменяем...")
+                    # Отменяем активные runs
+                    for run in active_runs:
+                        try:
+                            client.beta.threads.runs.cancel(thread_id=thread_id, run_id=run.id)
+                            print(f"✅ Run {run.id} отменен")
+                        except Exception as e:
+                            print(f"⚠️ Не удалось отменить run {run.id}: {e}")
+                    
+                    # Ждем немного, чтобы отмена применилась
+                    import time
+                    time.sleep(0.5)
+                    
+            except Exception as e:
+                print(f"⚠️ Ошибка при проверке thread: {e}")
+                # Если thread не существует, создаем новый
+                thread = client.beta.threads.create()
+                thread_id = thread.id
+        
+        # Формируем сообщение с контекстом (без промпта - он уже есть у ассистента)
+        # ВАЖНО: Добавляем telegram_id в контекст, чтобы ассистент мог его использовать при вызове инструментов
+        full_message = message
+        if user_context:
+            full_message = f"{user_context}\n\nВопрос пользователя: {message}"
+        
+        # Добавляем telegram_id в контекст для инструментов
+        full_message += f"\n\n[Системная информация: telegram_id пользователя = {telegram_id}. Используй этот telegram_id при вызове инструментов about_user, wardrobe, get_weather, recommend.]"
+        
+        # Создаем сообщение в thread
+        # ВАЖНО: Для Assistants API изображение должно быть ПЕРЕД текстом
+        message_content = []
+        
+        # Добавляем изображение ПЕРЕД текстом, если есть
+        if image_base64:
+            try:
+                # Загружаем изображение в OpenAI Files API
+                image_bytes = base64.b64decode(image_base64)
+                # Создаем временный файл для загрузки
+                temp_file = io.BytesIO(image_bytes)
+                temp_file.name = "image.jpg"  # Нужно для Files API
+                
+                file_response = client.files.create(
+                    file=temp_file,
+                    purpose="assistants"
+                )
+                
+                # ВАЖНО: Ждем, пока файл будет обработан OpenAI
+                # Проверяем статус файла
+                import time
+                max_wait = 10  # Максимум 10 секунд
+                wait_time = 0
+                while wait_time < max_wait:
+                    file_status = client.files.retrieve(file_response.id)
+                    if file_status.status == 'processed':
+                        print(f"✅ Файл обработан OpenAI, статус: {file_status.status}")
+                        break
+                    time.sleep(0.5)
+                    wait_time += 0.5
+                else:
+                    print(f"⚠️ Файл не обработан за {max_wait} секунд, продолжаем...")
+                
+                # Добавляем изображение в сообщение
+                # ВАЖНО: Для Assistants API изображение должно быть ПЕРЕД текстом или в правильном формате
+                image_content = {
+                    "type": "image_file",
+                    "image_file": {
+                        "file_id": file_response.id
+                    }
+                }
+                message_content.append(image_content)
+                print(f"✅ Изображение загружено в OpenAI, file_id: {file_response.id}")
+                print(f"📎 message_content после добавления изображения: {len(message_content)} элементов")
+                print(f"📎 Типы контента: {[c.get('type') for c in message_content]}")
+            except Exception as e:
+                print(f"⚠️ Ошибка загрузки изображения в OpenAI: {e}")
+                import traceback
+                traceback.print_exc()
+                # Продолжаем без изображения
+        
+        # Добавляем текст ПОСЛЕ изображения (если есть)
+        message_content.append({"type": "text", "text": full_message})
+        
+        # Логируем финальный message_content перед отправкой
+        print(f"📤 Финальный message_content: {len(message_content)} элементов")
+        print(f"📤 Типы контента: {[c.get('type') for c in message_content]}")
+        if image_base64:
+            print(f"📤 Текст сообщения (первые 100 символов): {full_message[:100]}...")
+        
+        # Добавляем сообщение в thread
+        client.beta.threads.messages.create(
+            thread_id=thread_id,
+            role="user",
+            content=message_content
+        )
+        
+        # Запускаем run с streaming
+        stream = client.beta.threads.runs.create(
+            thread_id=thread_id,
+            assistant_id=assistant_id,
+            stream=True
+        )
+        
+        # Функция для streaming ответа
+        def generate():
+            import time
+            import sys
+            try:
+                print(f"📤 Начало streaming для thread {thread_id}", flush=True)
+                sys.stdout.flush()
+                yield f"data: {json.dumps({'type': 'thread_id', 'thread_id': thread_id})}\n\n"
+                
+                text_buffer = ""  # Буфер для батчинга текста
+                last_send_time = time.time()
+                BATCH_DELAY = 0.05  # Задержка между отправками (50ms для плавности)
+                MIN_BATCH_SIZE = 3  # Минимальный размер батча
+                
+                for event in stream:
+                    # Обрабатываем события streaming
+                    event_type = getattr(event, 'event', None)
+                    print(f"📨 Получено событие: {event_type}", flush=True)
+                    sys.stdout.flush()
+                    # Детальное логирование для отладки
+                    if event_type is None:
+                        print(f"⚠️ Событие без типа: {type(event)}, атрибуты: {dir(event)}", flush=True)
+                        sys.stdout.flush()
+                        try:
+                            print(f"   Содержимое события: {str(event)[:200]}", flush=True)
+                            sys.stdout.flush()
+                        except:
+                            pass
+                    
+                    if event_type == 'thread.message.delta':
+                        # Получаем дельту текста
+                        try:
+                            print(f"   🔍 Обработка delta события...")
+                            if hasattr(event, 'data'):
+                                print(f"   ✅ event.data существует")
+                                if hasattr(event.data, 'delta'):
+                                    print(f"   ✅ event.data.delta существует")
+                                    delta = event.data.delta
+                                    if hasattr(delta, 'content') and delta.content:
+                                        print(f"   ✅ delta.content существует, длина: {len(delta.content)}")
+                                        for content_block in delta.content:
+                                            if hasattr(content_block, 'type'):
+                                                print(f"   📝 content_block.type: {content_block.type}")
+                                                if content_block.type == 'text' and hasattr(content_block, 'text'):
+                                                    if hasattr(content_block.text, 'value'):
+                                                        delta_text = content_block.text.value
+                                                        print(f"   📤 Дельта текста: '{delta_text[:50]}...' (длина: {len(delta_text)})")
+                                                        # Добавляем в буфер
+                                                        if delta_text:
+                                                            text_buffer += delta_text
+                                                            current_time = time.time()
+                                                            
+                                                            # Отправляем если накопилось достаточно или прошло время
+                                                            if (len(text_buffer) >= MIN_BATCH_SIZE or 
+                                                                (current_time - last_send_time >= BATCH_DELAY and text_buffer)):
+                                                                yield f"data: {json.dumps({'type': 'text_delta', 'text': text_buffer})}\n\n"
+                                                                print(f"📤 Отправлено {len(text_buffer)} символов: '{text_buffer[:50]}...'")
+                                                                text_buffer = ""
+                                                                last_send_time = current_time
+                                                else:
+                                                    print(f"   ⚠️ content_block не text или нет text атрибута")
+                                            else:
+                                                print(f"   ⚠️ content_block без type")
+                                    else:
+                                        print(f"   ⚠️ delta.content отсутствует или пусто")
+                                else:
+                                    print(f"   ⚠️ event.data.delta отсутствует")
+                            else:
+                                print(f"   ⚠️ event.data отсутствует")
+                        except Exception as e:
+                            print(f"⚠️ Ошибка обработки delta: {e}")
+                            import traceback
+                            traceback.print_exc()
+                    
+                    elif event_type == 'thread.message.completed':
+                        # Отправляем остаток буфера перед завершением
+                        if text_buffer:
+                            yield f"data: {json.dumps({'type': 'text_delta', 'text': text_buffer})}\n\n"
+                            text_buffer = ""
+                        print(f"✅ Сообщение завершено")
+                        yield f"data: {json.dumps({'type': 'message_completed'})}\n\n"
+                    
+                    elif event_type == 'thread.run.requires_action':
+                        # Ассистент требует выполнения инструментов (tools)
+                        print(f"🔧 Ассистент требует выполнения инструментов (tools)", flush=True)
+                        sys.stdout.flush()
+                        try:
+                            if hasattr(event, 'data') and hasattr(event.data, 'required_action'):
+                                required_action = event.data.required_action
+                                if hasattr(required_action, 'submit_tool_outputs'):
+                                    tool_calls = required_action.submit_tool_outputs.tool_calls
+                                    print(f"   📋 Найдено {len(tool_calls)} вызовов инструментов", flush=True)
+                                    sys.stdout.flush()
+                                    
+                                    # Обрабатываем каждый инструмент
+                                    tool_outputs = []
+                                    for tool_call in tool_calls:
+                                        tool_name = tool_call.function.name if hasattr(tool_call, 'function') and hasattr(tool_call.function, 'name') else 'unknown'
+                                        tool_args = {}
+                                        if hasattr(tool_call, 'function') and hasattr(tool_call.function, 'arguments'):
+                                            try:
+                                                tool_args = json.loads(tool_call.function.arguments)
+                                            except:
+                                                tool_args = {}
+                                        
+                                        print(f"   🔨 Инструмент: {tool_name}, аргументы: {tool_args}", flush=True)
+                                        sys.stdout.flush()
+                                        
+                                        # Обрабатываем каждый инструмент
+                                        result = handle_tool_call(tool_name, tool_args, telegram_id, client)
+                                        print(f"   📥 Результат инструмента {tool_name}: {result[:200]}...", flush=True)
+                                        sys.stdout.flush()
+                                        tool_outputs.append({
+                                            "tool_call_id": tool_call.id,
+                                            "output": result
+                                        })
+                                    
+                                    # Отправляем результаты инструментов
+                                    try:
+                                        run_id = event.data.id if hasattr(event.data, 'id') else None
+                                        if run_id:
+                                            # Отправляем результаты инструментов
+                                            # После submit_tool_outputs run продолжается автоматически в том же stream
+                                            print(f"   📤 Отправляем результаты инструментов для run {run_id}...", flush=True)
+                                            sys.stdout.flush()
+                                            
+                                            # Отправляем результаты инструментов
+                                            # Используем submit_tool_outputs_stream для получения stream продолжения
+                                            print(f"   📤 Отправляем результаты инструментов для run {run_id}...", flush=True)
+                                            sys.stdout.flush()
+                                            
+                                            # Используем stream=True для получения событий продолжения
+                                            # Это правильный способ - получаем stream после отправки результатов
+                                            try:
+                                                # Получаем stream через submit_tool_outputs_stream
+                                                tool_stream_manager = client.beta.threads.runs.submit_tool_outputs_stream(
+                                                    thread_id=thread_id,
+                                                    run_id=run_id,
+                                                    tool_outputs=tool_outputs
+                                                )
+                                                
+                                                print(f"   ✅ Результаты отправлены, получен stream manager...", flush=True)
+                                                sys.stdout.flush()
+                                                
+                                                # Используем stream manager напрямую - он итерируемый
+                                                print(f"   ✅ Обрабатываем события из tool stream manager...", flush=True)
+                                                sys.stdout.flush()
+                                                
+                                                # Обрабатываем события из tool stream manager напрямую
+                                                for tool_event in tool_stream_manager:
+                                                    tool_event_type = getattr(tool_event, 'event', None)
+                                                    print(f"   📨 Событие из tool stream: {tool_event_type}", flush=True)
+                                                    sys.stdout.flush()
+                                                    
+                                                    # Обрабатываем события так же, как из основного stream
+                                                    if tool_event_type == 'thread.message.delta':
+                                                        try:
+                                                            if hasattr(tool_event, 'data') and hasattr(tool_event.data, 'delta'):
+                                                                delta = tool_event.data.delta
+                                                                if hasattr(delta, 'content') and delta.content:
+                                                                    for content_block in delta.content:
+                                                                        if hasattr(content_block, 'type') and content_block.type == 'text':
+                                                                            if hasattr(content_block, 'text') and hasattr(content_block.text, 'value'):
+                                                                                delta_text = content_block.text.value
+                                                                                if delta_text:
+                                                                                    text_buffer += delta_text
+                                                                                    current_time = time.time()
+                                                                                    if (len(text_buffer) >= MIN_BATCH_SIZE or 
+                                                                                        (current_time - last_send_time >= BATCH_DELAY and text_buffer)):
+                                                                                        yield f"data: {json.dumps({'type': 'text_delta', 'text': text_buffer})}\n\n"
+                                                                                        print(f"📤 Отправлено {len(text_buffer)} символов из tool stream")
+                                                                                        text_buffer = ""
+                                                                                        last_send_time = current_time
+                                                        except Exception as e:
+                                                            print(f"⚠️ Ошибка обработки delta из tool stream: {e}")
+                                                    
+                                                    elif tool_event_type == 'thread.message.completed':
+                                                        if text_buffer:
+                                                            yield f"data: {json.dumps({'type': 'text_delta', 'text': text_buffer})}\n\n"
+                                                            text_buffer = ""
+                                                        yield f"data: {json.dumps({'type': 'message_completed'})}\n\n"
+                                                    
+                                                    elif tool_event_type == 'thread.run.completed':
+                                                        if text_buffer:
+                                                            yield f"data: {json.dumps({'type': 'text_delta', 'text': text_buffer})}\n\n"
+                                                            text_buffer = ""
+                                                        yield f"data: {json.dumps({'type': 'done'})}\n\n"
+                                                        print(f"✅ Run завершен из tool stream")
+                                                        return
+                                                    
+                                                    elif tool_event_type == 'thread.run.requires_action':
+                                                        # Рекурсивный вызов инструментов - обрабатываем снова
+                                                        print(f"   🔧 Новый requires_action в tool stream...", flush=True)
+                                                        sys.stdout.flush()
+                                                        # Выходим из tool stream и обрабатываем в основном цикле
+                                                        break
+                                                
+                                                print(f"   ✅ Tool stream обработан, продолжаем основной цикл...", flush=True)
+                                                sys.stdout.flush()
+                                                
+                                            except (AttributeError, TypeError) as e:
+                                                # Если метод stream() не существует или не работает, используем другой подход
+                                                print(f"   ⚠️ stream() не доступен ({e}), используем итерацию по manager...", flush=True)
+                                                sys.stdout.flush()
+                                                
+                                                # Пробуем итерировать напрямую по manager
+                                                try:
+                                                    for tool_event in tool_stream_manager:
+                                                        tool_event_type = getattr(tool_event, 'event', None)
+                                                        print(f"   📨 Событие из tool stream (direct): {tool_event_type}", flush=True)
+                                                        sys.stdout.flush()
+                                                        
+                                                        # Обрабатываем события так же, как из основного stream
+                                                        if tool_event_type == 'thread.message.delta':
+                                                            try:
+                                                                if hasattr(tool_event, 'data') and hasattr(tool_event.data, 'delta'):
+                                                                    delta = tool_event.data.delta
+                                                                    if hasattr(delta, 'content') and delta.content:
+                                                                        for content_block in delta.content:
+                                                                            if hasattr(content_block, 'type') and content_block.type == 'text':
+                                                                                if hasattr(content_block, 'text') and hasattr(content_block.text, 'value'):
+                                                                                    delta_text = content_block.text.value
+                                                                                    if delta_text:
+                                                                                        text_buffer += delta_text
+                                                                                        current_time = time.time()
+                                                                                        if (len(text_buffer) >= MIN_BATCH_SIZE or 
+                                                                                            (current_time - last_send_time >= BATCH_DELAY and text_buffer)):
+                                                                                            yield f"data: {json.dumps({'type': 'text_delta', 'text': text_buffer})}\n\n"
+                                                                                            print(f"📤 Отправлено {len(text_buffer)} символов из tool stream")
+                                                                                            text_buffer = ""
+                                                                                            last_send_time = current_time
+                                                            except Exception as e2:
+                                                                print(f"⚠️ Ошибка обработки delta из tool stream: {e2}")
+                                                        
+                                                        elif tool_event_type == 'thread.message.completed':
+                                                            if text_buffer:
+                                                                yield f"data: {json.dumps({'type': 'text_delta', 'text': text_buffer})}\n\n"
+                                                                text_buffer = ""
+                                                            yield f"data: {json.dumps({'type': 'message_completed'})}\n\n"
+                                                        
+                                                        elif tool_event_type == 'thread.run.completed':
+                                                            if text_buffer:
+                                                                yield f"data: {json.dumps({'type': 'text_delta', 'text': text_buffer})}\n\n"
+                                                                text_buffer = ""
+                                                            yield f"data: {json.dumps({'type': 'done'})}\n\n"
+                                                            print(f"✅ Run завершен из tool stream")
+                                                            return
+                                                        
+                                                        elif tool_event_type == 'thread.run.requires_action':
+                                                            print(f"   🔧 Новый requires_action в tool stream...", flush=True)
+                                                            sys.stdout.flush()
+                                                            break
+                                                    
+                                                    print(f"   ✅ Tool stream обработан (direct), продолжаем основной цикл...", flush=True)
+                                                    sys.stdout.flush()
+                                                    continue
+                                                except Exception as e3:
+                                                    print(f"   ⚠️ Не удалось итерировать по manager ({e3}), используем обычный submit_tool_outputs...", flush=True)
+                                                    sys.stdout.flush()
+                                                    client.beta.threads.runs.submit_tool_outputs(
+                                                        thread_id=thread_id,
+                                                        run_id=run_id,
+                                                        tool_outputs=tool_outputs
+                                                    )
+                                                    print(f"   ✅ Результаты отправлены, создаем новый stream для продолжения...", flush=True)
+                                                    sys.stdout.flush()
+                                                    
+                                                    # После submit_tool_outputs нужно опрашивать run и получать новые сообщения
+                                                    # Правильный способ - опрашивать run статус и получать сообщения
+                                                    print(f"   🔄 Опрашиваем run для получения ответа...", flush=True)
+                                                    sys.stdout.flush()
+                                                    
+                                                    # Опрашиваем run до завершения
+                                                    max_polls = 30
+                                                    poll_count = 0
+                                                    while poll_count < max_polls:
+                                                        try:
+                                                            run_status = client.beta.threads.runs.retrieve(
+                                                                thread_id=thread_id,
+                                                                run_id=run_id
+                                                            )
+                                                            print(f"   📊 Статус run (опрос {poll_count + 1}): {run_status.status}", flush=True)
+                                                            sys.stdout.flush()
+                                                            
+                                                            if run_status.status == 'completed':
+                                                                # Run завершен, получаем сообщения
+                                                                print(f"   ✅ Run завершен, получаем сообщения...", flush=True)
+                                                                sys.stdout.flush()
+                                                                
+                                                                # Получаем последние сообщения из thread
+                                                                # ВАЖНО: получаем несколько сообщений и ищем ответ ассистента
+                                                                messages = client.beta.threads.messages.list(
+                                                                    thread_id=thread_id,
+                                                                    limit=10  # Получаем больше сообщений, чтобы найти ответ ассистента
+                                                                )
+                                                                
+                                                                if messages.data:
+                                                                    # Ищем последнее сообщение от ассистента (role='assistant')
+                                                                    assistant_message = None
+                                                                    for msg in messages.data:
+                                                                        if hasattr(msg, 'role') and msg.role == 'assistant':
+                                                                            assistant_message = msg
+                                                                            break
+                                                                    
+                                                                    if not assistant_message:
+                                                                        # Если не нашли сообщение ассистента, берем первое (последнее по времени)
+                                                                        assistant_message = messages.data[0]
+                                                                    
+                                                                    print(f"   📨 Найдено сообщение ассистента (role={getattr(assistant_message, 'role', 'unknown')})", flush=True)
+                                                                    sys.stdout.flush()
+                                                                    
+                                                                    if hasattr(assistant_message, 'content') and assistant_message.content:
+                                                                        # Извлекаем текст из сообщения
+                                                                        message_text = ""
+                                                                        for content_block in assistant_message.content:
+                                                                            if hasattr(content_block, 'type') and content_block.type == 'text':
+                                                                                if hasattr(content_block, 'text') and hasattr(content_block.text, 'value'):
+                                                                                    message_text += content_block.text.value
+                                                                        
+                                                                        if message_text:
+                                                                            print(f"   📝 Текст сообщения (первые 200 символов): {message_text[:200]}...", flush=True)
+                                                                            sys.stdout.flush()
+                                                                            # Отправляем весь текст сразу
+                                                                            yield f"data: {json.dumps({'type': 'text_delta', 'text': message_text})}\n\n"
+                                                                            print(f"📤 Отправлено сообщение из опроса: {len(message_text)} символов")
+                                                                        else:
+                                                                            print(f"   ⚠️ Сообщение ассистента пустое", flush=True)
+                                                                            sys.stdout.flush()
+                                                                    else:
+                                                                        print(f"   ⚠️ Сообщение ассистента не содержит content", flush=True)
+                                                                        sys.stdout.flush()
+                                                                else:
+                                                                    print(f"   ⚠️ Не найдено сообщений в thread", flush=True)
+                                                                    sys.stdout.flush()
+                                                                    
+                                                                yield f"data: {json.dumps({'type': 'message_completed'})}\n\n"
+                                                                yield f"data: {json.dumps({'type': 'done'})}\n\n"
+                                                                print(f"✅ Сообщение получено и отправлено")
+                                                                return
+                                                            
+                                                            elif run_status.status == 'requires_action':
+                                                                # Новый requires_action - нужно обработать в основном цикле
+                                                                print(f"   🔧 Новый requires_action в опросе, получаем tool_calls и обрабатываем...", flush=True)
+                                                                sys.stdout.flush()
+                                                                
+                                                                # Получаем tool_calls из run_status
+                                                                try:
+                                                                    if hasattr(run_status, 'required_action') and hasattr(run_status.required_action, 'submit_tool_outputs'):
+                                                                        tool_calls = run_status.required_action.submit_tool_outputs.tool_calls
+                                                                        print(f"   📋 Найдено {len(tool_calls)} вызовов инструментов в опросе", flush=True)
+                                                                        
+                                                                        # Обрабатываем инструменты
+                                                                        tool_outputs = []
+                                                                        for tool_call in tool_calls:
+                                                                            tool_name = tool_call.function.name if hasattr(tool_call, 'function') and hasattr(tool_call.function, 'name') else 'unknown'
+                                                                            tool_args = {}
+                                                                            if hasattr(tool_call, 'function') and hasattr(tool_call.function, 'arguments'):
+                                                                                try:
+                                                                                    tool_args = json.loads(tool_call.function.arguments)
+                                                                                except:
+                                                                                    tool_args = {}
+                                                                            
+                                                                            print(f"   🔨 Инструмент в опросе: {tool_name}, аргументы: {tool_args}", flush=True)
+                                                                            
+                                                                            result = handle_tool_call(tool_name, tool_args, telegram_id, client)
+                                                                            tool_outputs.append({
+                                                                                "tool_call_id": tool_call.id,
+                                                                                "output": result
+                                                                            })
+                                                                        
+                                                                        # Отправляем результаты
+                                                                        client.beta.threads.runs.submit_tool_outputs(
+                                                                            thread_id=thread_id,
+                                                                            run_id=run_id,
+                                                                            tool_outputs=tool_outputs
+                                                                        )
+                                                                        print(f"   ✅ Результаты инструментов отправлены в опросе, продолжаем опрос...", flush=True)
+                                                                        time.sleep(0.5)
+                                                                        poll_count += 1
+                                                                        continue
+                                                                except Exception as e:
+                                                                    print(f"   ⚠️ Ошибка обработки requires_action в опросе: {e}", flush=True)
+                                                                
+                                                                # Если не удалось обработать, продолжаем опрос
+                                                                time.sleep(0.5)
+                                                                poll_count += 1
+                                                                continue
+                                                            
+                                                            elif run_status.status in ['failed', 'cancelled', 'expired']:
+                                                                print(f"   ⚠️ Run завершен со статусом: {run_status.status}", flush=True)
+                                                                sys.stdout.flush()
+                                                                yield f"data: {json.dumps({'type': 'error', 'message': f'Run завершен со статусом: {run_status.status}'})}\n\n"
+                                                                return
+                                                            
+                                                            # Ждем перед следующим опросом
+                                                            time.sleep(0.5)
+                                                            poll_count += 1
+                                                        
+                                                        except Exception as e4:
+                                                            print(f"   ⚠️ Ошибка опроса run: {e4}", flush=True)
+                                                            sys.stdout.flush()
+                                                            break
+                                                    
+                                                    if poll_count >= max_polls:
+                                                        print(f"   ⚠️ Достигнут лимит опросов, выходим...", flush=True)
+                                                        sys.stdout.flush()
+                                                    
+                                                    # Продолжаем основной цикл
+                                                    continue
+                                        else:
+                                            print(f"   ⚠️ Не найден run_id для отправки результатов", flush=True)
+                                            sys.stdout.flush()
+                                    except Exception as e:
+                                        print(f"   ⚠️ Ошибка отправки результатов инструментов: {e}", flush=True)
+                                        sys.stdout.flush()
+                                        import traceback
+                                        traceback.print_exc()
+                        except Exception as e:
+                            print(f"⚠️ Ошибка обработки requires_action: {e}", flush=True)
+                            sys.stdout.flush()
+                            import traceback
+                            traceback.print_exc()
+                        # Продолжаем ожидать события после отправки результатов
+                        print(f"   🔄 Продолжаем ожидать события после отправки результатов tool calls...", flush=True)
+                        sys.stdout.flush()
+                        continue
+                    
+                    elif event_type == 'thread.run.completed':
+                        # Отправляем остаток буфера перед завершением
+                        if text_buffer:
+                            yield f"data: {json.dumps({'type': 'text_delta', 'text': text_buffer})}\n\n"
+                            text_buffer = ""
+                        print(f"✅ Run завершен", flush=True)
+                        sys.stdout.flush()
+                        yield f"data: {json.dumps({'type': 'done'})}\n\n"
+                        break
+                    
+                    elif event_type == 'thread.run.failed':
+                        # Отправляем остаток буфера перед ошибкой
+                        if text_buffer:
+                            yield f"data: {json.dumps({'type': 'text_delta', 'text': text_buffer})}\n\n"
+                            text_buffer = ""
+                        try:
+                            error_msg = str(event.data) if hasattr(event, 'data') else 'Unknown error'
+                            if hasattr(event, 'data') and hasattr(event.data, 'last_error'):
+                                error_msg = str(event.data.last_error)
+                        except:
+                            error_msg = 'Unknown error'
+                        print(f"❌ Run провалился: {error_msg}")
+                        yield f"data: {json.dumps({'type': 'error', 'error': error_msg})}\n\n"
+                        break
+                    
+                    elif event_type == 'error' or event_type is None:
+                        # Отправляем остаток буфера перед ошибкой
+                        if text_buffer:
+                            yield f"data: {json.dumps({'type': 'text_delta', 'text': text_buffer})}\n\n"
+                            text_buffer = ""
+                        try:
+                            error_msg = str(event.data) if hasattr(event, 'data') else 'Unknown error'
+                        except:
+                            error_msg = 'Unknown error'
+                        print(f"❌ Ошибка события: {error_msg}")
+                        yield f"data: {json.dumps({'type': 'error', 'error': error_msg})}\n\n"
+                        break
+                
+                # Отправляем остаток буфера в конце
+                if text_buffer:
+                    yield f"data: {json.dumps({'type': 'text_delta', 'text': text_buffer})}\n\n"
+                    print(f"📤 Отправлен остаток буфера: {len(text_buffer)} символов")
+                
+            except Exception as e:
+                print(f"❌ Ошибка в streaming: {e}")
+                import traceback
+                traceback.print_exc()
+                yield f"data: {json.dumps({'type': 'error', 'error': str(e)})}\n\n"
+        
+        return Response(
+            generate(),
+            mimetype='text/event-stream',
+            headers={
+                'Cache-Control': 'no-cache',
+                'X-Accel-Buffering': 'no',
+                'Connection': 'keep-alive'
+            }
+        )
+        
+    except Exception as e:
+        print(f"❌ Ошибка в chat_style: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5001, debug=False) 
