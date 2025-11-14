@@ -327,6 +327,11 @@ export default function App() {
 
   // Функция для нормализации текста (первая буква заглавная, остальные строчные)
   const handleChange = (e) => {
+    // Защита от ошибок, если questions или step не определены
+    if (!questions || !questions[step]) {
+      console.error('questions or step not defined in handleChange');
+      return;
+    }
     const field = questions[step].field;
     let value = e.target.value;
     
@@ -486,9 +491,20 @@ export default function App() {
 
   // Показываем форму входа если нет tgId И загрузка завершена
   // ВАЖНО: эта проверка должна быть ПЕРВОЙ, до любых обращений к questions или другим данным
-  console.log('🔍 Проверка условий:', { tgId, loading, shouldShowLogin: !tgId && !loading, started, viewing, editing });
+  console.log('🔍 Проверка условий:', { 
+    tgId, 
+    loading, 
+    shouldShowLogin: !tgId && !loading, 
+    started, 
+    viewing, 
+    editing,
+    questionsDefined: !!questions,
+    stepValue: step
+  });
+  
+  // КРИТИЧЕСКИ ВАЖНО: эта проверка должна быть ПЕРВОЙ
   if (!tgId && !loading) {
-    console.log('✅ Показываем форму входа');
+    console.log('✅ Показываем форму входа - условие выполнено!');
     return (
       <ErrorBoundary>
         <div className={`app ${telegramWebApp.isAvailable ? 'telegram-webapp' : ''}`}>
