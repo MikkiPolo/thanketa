@@ -57,7 +57,7 @@ services:
       - ./ssl:/etc/nginx/ssl:ro
       - ./logs/nginx:/var/log/nginx
       - certbot-www:/var/www/certbot:ro
-      - certbot-conf:/etc/letsencrypt:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
     depends_on:
       - frontend
       - backend
