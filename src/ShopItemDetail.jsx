@@ -114,17 +114,13 @@ const ShopItemDetail = ({ item, telegramId, onBack }) => {
       const imageBlob = await downloadImage(item.image_url);
 
       // 2. Сжимаем изображение
-      console.log('🗜️ Сжимаем изображение...');
       const compressedBlob = await backendService.aggressiveCompressImage(imageBlob);
-      console.log('✅ Изображение сжато, размер:', compressedBlob.size, 'bytes');
 
       // 3. Генерируем UUID для изображения
       const imageId = crypto.randomUUID();
 
       // 4. Загружаем изображение в Supabase Storage
-      console.log('☁️ Загружаем изображение в Supabase Storage...');
       await wardrobeService.uploadImage(telegramId, imageId, compressedBlob);
-      console.log('✅ Изображение загружено в Storage');
 
       // 5. Сохраняем данные вещи в базу данных
       const wardrobeItem = {
