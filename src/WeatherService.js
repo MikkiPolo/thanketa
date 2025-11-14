@@ -7,7 +7,7 @@ class WeatherService {
   async getWeatherByLocation(lat, lon) {
     try {
       if (!this.apiKey) {
-        console.warn('OpenWeather API key не установлен');
+        // OpenWeather API key не установлен
         return this.getDefaultWeatherData();
       }
 
@@ -30,7 +30,7 @@ class WeatherService {
   async getWeatherByCity(city) {
     try {
       if (!this.apiKey) {
-        console.warn('OpenWeather API key не установлен');
+        // OpenWeather API key не установлен
         return this.getDefaultWeatherData();
       }
 

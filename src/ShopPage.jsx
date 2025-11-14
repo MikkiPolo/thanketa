@@ -37,7 +37,7 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
 
       setItems(brandItems);
     } catch (err) {
-      console.error('❌ Ошибка загрузки товаров брендов:', err);
+      console.error('Ошибка загрузки товаров брендов:', err);
       setError('Не удалось загрузить товары. Попробуйте позже.');
     } finally {
       setLoading(false);

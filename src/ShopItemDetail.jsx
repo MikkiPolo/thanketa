@@ -44,7 +44,7 @@ const ShopItemDetail = ({ item, telegramId, onBack }) => {
         });
       } catch (corsError) {
         // Если CORS не работает, пробуем через proxy или canvas
-        console.warn('CORS error, trying alternative method:', corsError);
+        // CORS error, trying alternative method
         
         // Альтернативный метод через canvas (работает для изображений с того же домена или без CORS)
         return new Promise((resolve, reject) => {
@@ -108,17 +108,14 @@ const ShopItemDetail = ({ item, telegramId, onBack }) => {
     setAddSuccess(false);
 
     try {
-      console.log('🔄 Начинаем добавление товара в гардероб:', {
-        itemId: item.id,
+      // Начинаем добавление товара в гардероб
         category: item.category,
         season: item.season,
         telegramId: telegramId
       });
 
       // 1. Скачиваем изображение
-      console.log('📥 Скачиваем изображение:', item.image_url);
       const imageBlob = await downloadImage(item.image_url);
-      console.log('✅ Изображение скачано, размер:', imageBlob.size, 'bytes');
 
       // 2. Сжимаем изображение
       console.log('🗜️ Сжимаем изображение...');

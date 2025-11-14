@@ -31,5 +31,5 @@ export const API_BASE_URL = 'https://linapolo.ru/api/public';
 // URL для изображений
 export const STORAGE_URL = 'https://lipolo.store/storage/v1/object/public/brand-items-images';
 
-console.log('✅ Supabase config initialized:', SUPABASE_URL);
+// Supabase config initialized (логирование отключено для безопасности)
 

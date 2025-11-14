@@ -340,15 +340,10 @@ const CapsulePage = ({ profile, onBack, initialCapsule = null, isFavoritesView =
            const flat = [];
           (result.capsules.categories || []).forEach(category => {
             (category.fullCapsules || []).forEach(capsule => {
-              const itemsResolved = sortItemsByCategory((capsule.items || []).map(itemIdOrObject => {
+                const itemsResolved = sortItemsByCategory((capsule.items || []).map(itemIdOrObject => {
                 // Проверяем: это ID вещи пользователя или полный объект товара бренда?
                 if (typeof itemIdOrObject === 'object' && itemIdOrObject !== null) {
                   // Это полный объект (брендовый товар или вещь пользователя)
-                  console.log('🛍️ Item detected:', itemIdOrObject);
-                  console.log('🖼️ image_url:', itemIdOrObject.image_url);
-                  console.log('🖼️ imageUrl:', itemIdOrObject.imageUrl);
-                  console.log('👤 is_brand_item:', itemIdOrObject.is_brand_item);
-                  
                   const processedItem = {
                     ...itemIdOrObject,
                     imageUrl: itemIdOrObject.imageUrl || itemIdOrObject.image_url || null, // Поддерживаем оба формата

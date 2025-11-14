@@ -32,7 +32,7 @@ class BrandItemsService {
         .limit(limit * 2);  // Берем больше для разнообразия
       
       if (error) {
-        console.error('❌ Error loading brand items:', error);
+        console.error('Ошибка загрузки товаров брендов:', error);
         return [];
       }
       
@@ -54,7 +54,7 @@ class BrandItemsService {
       return result;
       
     } catch (error) {
-      console.error('❌ Exception in getItemsForCategory:', error);
+      console.error('Ошибка в getItemsForCategory:', error);
       return [];
     }
   }
