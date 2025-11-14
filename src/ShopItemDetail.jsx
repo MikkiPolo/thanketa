@@ -120,7 +120,6 @@ const ShopItemDetail = ({ item, telegramId, onBack }) => {
 
       // 3. Генерируем UUID для изображения
       const imageId = crypto.randomUUID();
-      console.log('🆔 Сгенерирован image_id:', imageId);
 
       // 4. Загружаем изображение в Supabase Storage
       console.log('☁️ Загружаем изображение в Supabase Storage...');
