@@ -207,8 +207,6 @@ export default function App() {
       navigator.geolocation.getCurrentPosition(
         async (position) => {
           const { latitude, longitude } = position.coords;
-          console.log('📍 Геолокация получена:', latitude, longitude);
-          
           try {
             // Сохраняем координаты в профиль
             await profileService.saveProfile({
@@ -216,15 +214,14 @@ export default function App() {
               location_latitude: latitude,
               location_longitude: longitude
             });
-            console.log('✅ Координаты сохранены в профиль');
             resolve({ latitude, longitude });
           } catch (error) {
-            console.error('❌ Ошибка сохранения координат:', error);
+            console.error('Ошибка сохранения координат:', error);
             resolve(null);
           }
         },
         (error) => {
-          console.warn('⚠️ Пользователь не предоставил доступ к геолокации:', error.message);
+          // Пользователь не предоставил доступ - это нормально, не логируем
           resolve(null);
         },
         {

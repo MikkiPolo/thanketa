@@ -131,10 +131,6 @@ export const wardrobeService = {
               // Загрузить изображение в Storage
             async uploadImage(telegramId, imageId, imageBlob) {
               try {
-                console.log('Uploading image to Supabase Storage...');
-                console.log('File size:', imageBlob.size, 'bytes');
-                console.log('File type:', imageBlob.type);
-                
                 const { data, error } = await supabase.storage
                   .from('wardrobe-images')
                   .upload(`${telegramId}/${imageId}.png`, imageBlob, {

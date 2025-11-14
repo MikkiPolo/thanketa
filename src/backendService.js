@@ -75,12 +75,7 @@ export const backendService = {
       const result = await response.json();
       return result;
     } catch (error) {
-      console.error('Ошибка анализа гардероба:', error);
-      console.error('❌ BackendService: Error details:', {
-        message: error.message,
-        name: error.name,
-        stack: error.stack
-      });
+      console.error('Ошибка анализа гардероба:', error.message);
       throw error;
     }
   },

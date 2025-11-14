@@ -93,7 +93,6 @@ const CapsulePage = ({ profile, onBack, initialCapsule = null, isFavoritesView =
       // Загружаем избранное
       
       if (!profile.telegram_id || profile.telegram_id === 'default') {
-        console.log('⚠️ telegram_id отсутствует, пропускаем загрузку избранного');
         setFavorites([]);
         return;
       }

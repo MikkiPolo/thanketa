@@ -34,17 +34,14 @@ const ChatPage = ({ telegramId }) => {
       if (!threadId || !telegramId) return;
       
       try {
-        console.log('📜 Загрузка истории чата для thread:', threadId);
         const response = await fetch(`${BACKEND_URL}${API_ENDPOINTS.CHAT_HISTORY}?thread_id=${threadId}&telegram_id=${telegramId}`);
         
         if (!response.ok) {
-          console.warn('⚠️ Не удалось загрузить историю:', response.status);
           return;
         }
         
         const data = await response.json();
         if (data.messages && Array.isArray(data.messages)) {
-          console.log('✅ Загружено сообщений:', data.messages.length);
           // Преобразуем сообщения из формата OpenAI в формат компонента
           const formattedMessages = data.messages.map((msg, idx) => ({
             id: Date.now() - (data.messages.length - idx) * 1000, // Уникальные ID
