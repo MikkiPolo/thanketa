@@ -70,8 +70,6 @@ class BrandItemsService {
   async getItemsForCapsule(capsuleParams = {}, userWardrobe = [], itemsPerCategory = 2) {
     const { season = 'Всесезонный', temperature = 20 } = capsuleParams;
     
-    console.log(`🎯 Loading brand items for capsule: ${season}, ${temperature}°C`);
-    
     // Группируем гардероб пользователя по категориям
     const userByCategory = this._groupByCategory(userWardrobe);
     
@@ -88,8 +86,6 @@ class BrandItemsService {
       const userHas = (userByCategory[category] || []).length;
       const toLoad = userHas > 0 ? 1 : itemsPerCategory; // Если у пользователя есть - берем меньше
       
-      console.log(`  📦 ${category}: user has ${userHas}, loading ${toLoad} from brands`);
-      
       const items = await this.getItemsForCategory(category, season, toLoad);
       
       return {
@@ -103,8 +99,6 @@ class BrandItemsService {
     
     // Собираем все товары
     const allBrandItems = results.flatMap(r => r.items);
-    
-    console.log(`✅ Total brand items loaded: ${allBrandItems.length}`);
     
     return allBrandItems;
   }
@@ -129,14 +123,11 @@ class BrandItemsService {
         capsule_id: capsuleId 
       })
     })
-    .then(response => {
-      if (response.ok) {
-        console.log(`📊 Impression tracked: ${itemId}`);
-      }
+    .then(() => {
+      // Impression tracked (логирование отключено)
     })
-    .catch(error => {
-      console.warn('⚠️ Failed to track impression:', error);
-      // Не критично - просто не записалась метрика
+    .catch(() => {
+      // Failed to track impression (не критично)
     });
   }
   
@@ -161,14 +152,11 @@ class BrandItemsService {
         action: 'visit_shop'
       })
     })
-    .then(response => {
-      if (response.ok) {
-        console.log(`🛒 Click tracked: ${itemId}`);
-      }
+    .then(() => {
+      // Click tracked (логирование отключено)
     })
-    .catch(error => {
-      console.warn('⚠️ Failed to track click:', error);
-      // Не критично - просто не записалась метрика
+    .catch(() => {
+      // Failed to track click (не критично)
     });
   }
   
@@ -194,7 +182,7 @@ class BrandItemsService {
         console.error('❌ Error opening shop link:', error);
       }
     } else {
-      console.warn('⚠️ No shop_link for item:', item.id);
+      // No shop_link for item (не критично)
     }
   }
   
@@ -291,7 +279,7 @@ class BrandItemsService {
         return false;
       }
       
-      console.log('✅ Supabase connected! Sample item:', data);
+      // Supabase connected
       return true;
       
     } catch (error) {

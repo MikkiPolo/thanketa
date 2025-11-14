@@ -229,7 +229,7 @@ class TelegramWebApp {
         document.documentElement.style.setProperty('--tg-viewport-height', `${viewportHeight}px`);
       }
       
-      console.log('Telegram Web App настроен для полного экрана');
+      // Telegram Web App настроен для полного экрана
     } catch (error) {
       console.error('Ошибка настройки полного экрана:', error);
     }

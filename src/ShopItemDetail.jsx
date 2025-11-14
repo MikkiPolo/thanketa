@@ -132,9 +132,7 @@ const ShopItemDetail = ({ item, telegramId, onBack }) => {
         ai_generated: false // Товар из магазина, не AI-генерированный
       };
 
-      console.log('💾 Сохраняем данные в базу:', wardrobeItem);
       const newItem = await wardrobeService.addItem(wardrobeItem);
-      console.log('✅ Товар успешно добавлен в гардероб:', newItem);
 
       setAddSuccess(true);
       

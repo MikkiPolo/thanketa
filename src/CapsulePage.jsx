@@ -283,9 +283,6 @@ const CapsulePage = ({ profile, onBack, initialCapsule = null, isFavoritesView =
       
       try {
         const fullUrl = `${BACKEND_URL}${API_ENDPOINTS.GENERATE_CAPSULES}`;
-        console.log('🔗 Отправляем запрос на URL:', fullUrl);
-        console.log('🔧 BACKEND_URL:', BACKEND_URL);
-        console.log('🔧 API_ENDPOINTS.GENERATE_CAPSULES:', API_ENDPOINTS.GENERATE_CAPSULES);
         
         const slimWardrobe = (wardrobe || []).map(it => ({
           id: it.id,
@@ -357,9 +354,6 @@ const CapsulePage = ({ profile, onBack, initialCapsule = null, isFavoritesView =
                       processedItem.imageUrl = wardrobeService.getImageUrl(profile.telegram_id, userItem.image_id);
                     }
                   }
-                  
-                  console.log('✅ Processed item:', processedItem);
-                  console.log('🖼️ Final imageUrl:', processedItem.imageUrl);
                   
                   return processedItem;
                 } else {
@@ -526,16 +520,9 @@ const CapsulePage = ({ profile, onBack, initialCapsule = null, isFavoritesView =
 
   const handleAddToFavorites = async (capsule) => {
     try {
-      console.log('🔄 Начинаем добавление в избранное:', {
-        capsuleId: capsule.id,
-        capsuleName: capsule.name,
-        telegramId: profile.telegram_id,
-        selectedCategory: selectedCategory
-      });
-
       // Проверяем, что у нас есть telegram_id
       if (!profile.telegram_id || profile.telegram_id === 'default') {
-        console.error('❌ Отсутствует telegram_id:', profile.telegram_id);
+        console.error('Отсутствует telegram_id');
         alert('Ошибка: не удалось определить пользователя. Попробуйте перезагрузить страницу.');
         return;
       }
@@ -548,21 +535,15 @@ const CapsulePage = ({ profile, onBack, initialCapsule = null, isFavoritesView =
         category: selectedCategory || 'general'
       };
 
-      console.log('📦 Подготовленные данные для Supabase:', favoriteCapsule);
-
       // Сохраняем в Supabase
-      console.log('💾 Сохраняем в Supabase...');
-      const result = await favoritesService.addToFavorites(profile.telegram_id, favoriteCapsule);
-      console.log('✅ Результат сохранения в Supabase:', result);
+      await favoritesService.addToFavorites(profile.telegram_id, favoriteCapsule);
       
       // Обновляем локальное состояние
       const newFavorites = [...favorites, favoriteCapsule];
       setFavorites(newFavorites);
-      console.log('📱 Обновлено локальное состояние, избранных капсул:', newFavorites.length);
       
       // Также сохраняем в localStorage как fallback
       localStorage.setItem(`favorites_${profile.telegram_id}`, JSON.stringify(newFavorites));
-      console.log('💾 Сохранено в localStorage');
       
       // Показываем уведомление
       alert('Капсула добавлена в избранное!');
@@ -649,7 +630,7 @@ const CapsulePage = ({ profile, onBack, initialCapsule = null, isFavoritesView =
           logoImg.onload = () => resolve(logoImg);
           logoImg.onerror = reject;
           logoImg.src = '/vite.svg';
-          console.log('Загружаем логотип:', logoImg.src);
+          // Logo loaded
         });
       };
 
@@ -880,11 +861,11 @@ const CapsulePage = ({ profile, onBack, initialCapsule = null, isFavoritesView =
                           console.error('❌ Ошибка загрузки изображения в деталях:', e.target.src);
                           if (e.target.src.includes('.png')) {
                             e.target.src = e.target.src.replace('.png', '.jpg');
-                            console.log('🔄 Пробуем .jpg версию:', e.target.src);
+                            // Trying .jpg version
                           }
                         }}
                         onLoad={() => {
-                          console.log('✅ Изображение в деталях загружено:', item.imageUrl || item.image_url);
+                          // Image loaded
                         }}
                       />
                     )}
@@ -1045,11 +1026,11 @@ const CapsulePage = ({ profile, onBack, initialCapsule = null, isFavoritesView =
                                 console.error('❌ Статус:', e.target.naturalWidth === 0 ? 'Не загружено' : 'Загружено');
                                 if (e.target.src.includes('.png')) {
                                   e.target.src = e.target.src.replace('.png', '.jpg');
-                                  console.log('🔄 Пробуем .jpg версию:', e.target.src);
+                                  // Trying .jpg version
                                 }
                               }}
                               onLoad={() => {
-                                console.log('✅ Изображение загружено:', it.imageUrl || it.image_url);
+                                // Image loaded
                               }}
                             />
                           )}

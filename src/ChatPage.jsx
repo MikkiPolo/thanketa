@@ -87,15 +87,12 @@ const ChatPage = ({ telegramId }) => {
       
       if (isHeic) {
         // Для HEIC файлов конвертируем на бэкенде для превью
-        console.log('📸 HEIC файл выбран:', file.name, 'размер:', (file.size / 1024 / 1024).toFixed(2), 'MB');
-        
         // Показываем placeholder сразу, пока идет конвертация
         const placeholder = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI2YzZjRmNiIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTQiIGZpbGw9IiM2YjcyODAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5IRUlDIEluYWdlPC90ZXh0Pjwvc3ZnPg==';
         setImagePreview(placeholder);
         
         try {
           // Отправляем файл на бэкенд для конвертации
-          console.log('🔄 Отправляем HEIC на бэкенд для конвертации...');
           const formData = new FormData();
           formData.append('image', file);
           
@@ -111,15 +108,13 @@ const ChatPage = ({ telegramId }) => {
           const result = await response.json();
           
           if (result.success && result.preview) {
-            console.log('✅ Превью HEIC получено с бэкенда');
             setImagePreview(result.preview);
           } else {
             throw new Error(result.error || 'Не удалось получить превью');
           }
         } catch (error) {
-          console.error('❌ Ошибка получения превью HEIC с бэкенда:', error);
+          console.error('Ошибка получения превью HEIC:', error);
           // Оставляем placeholder, если конвертация не удалась
-          console.log('⚠️ Используется placeholder для HEIC превью');
         }
       } else {
         // Для обычных форматов используем стандартный FileReader
@@ -585,7 +580,9 @@ const ChatPage = ({ telegramId }) => {
           <img 
             src={imagePreview} 
             alt="Preview" 
-            onLoad={() => console.log('✅ Превью изображение загружено')}
+            onLoad={() => {
+              // Preview image loaded
+            }}
             onError={(e) => {
               console.error('❌ Ошибка загрузки превью:', e);
               console.error('❌ src:', imagePreview?.substring(0, 100));

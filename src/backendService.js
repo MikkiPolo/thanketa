@@ -162,22 +162,17 @@ export const backendService = {
 
   // Агрессивное сжатие для больших файлов
   async aggressiveCompressImage(imageFile) {
-    console.log('Original file size:', imageFile.size, 'bytes');
-    
     // Первое сжатие: 600px, качество 0.7
     let compressed = await this.compressImage(imageFile, 600, 0.7);
-    console.log('First compression:', compressed.size, 'bytes');
     
     // Если файл все еще больше 2MB, сжимаем еще больше
     if (compressed.size > 2 * 1024 * 1024) {
       compressed = await this.compressImage(compressed, 400, 0.5);
-      console.log('Second compression:', compressed.size, 'bytes');
     }
     
     // Если файл все еще больше 1MB, сжимаем до минимума
     if (compressed.size > 1 * 1024 * 1024) {
       compressed = await this.compressImage(compressed, 300, 0.3);
-      console.log('Final compression:', compressed.size, 'bytes');
     }
     
     return compressed;
