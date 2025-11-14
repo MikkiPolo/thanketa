@@ -495,6 +495,32 @@ def wardrobe_recommendations():
         print(f"❌ Ошибка рекомендаций гардероба: {e}")
         return jsonify({ 'recommendations': 'Не удалось выполнить анализ. Попробуйте позже.', 'unsuitable_items': [] }), 200
 
+@app.route('/weather', methods=['GET'])
+def get_weather():
+    """Получение погоды по координатам"""
+    try:
+        lat = request.args.get('lat')
+        lon = request.args.get('lon')
+        
+        if not lat or not lon:
+            return jsonify({'error': 'Latitude and longitude required'}), 400
+        
+        # Получаем API ключ из переменных окружения
+        api_key = os.getenv('OPENWEATHER_API_KEY', 'd69e489c7ddeb793bff2350cc232dab7')
+        weather_url = f"https://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={api_key}&units=metric&lang=ru"
+        
+        import requests
+        weather_response = requests.get(weather_url, timeout=10)
+        
+        if weather_response.status_code == 200:
+            return jsonify(weather_response.json()), 200
+        else:
+            return jsonify({'error': 'Weather API error'}), weather_response.status_code
+            
+    except Exception as e:
+        print(f"Ошибка получения погоды: {e}")
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/analyze-wardrobe-item', methods=['POST'])
 def analyze_wardrobe_item():
     """Анализ предмета гардероба с помощью AI"""

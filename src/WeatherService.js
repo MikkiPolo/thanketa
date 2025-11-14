@@ -6,13 +6,9 @@ class WeatherService {
 
   async getWeatherByLocation(lat, lon) {
     try {
-      if (!this.apiKey) {
-        // OpenWeather API key не установлен
-        return this.getDefaultWeatherData();
-      }
-
+      const { BACKEND_URL, API_ENDPOINTS } = await import('./config.js');
       const response = await fetch(
-        `${this.baseUrl}/weather?lat=${lat}&lon=${lon}&appid=${this.apiKey}&units=metric&lang=ru`
+        `${BACKEND_URL}${API_ENDPOINTS.WEATHER}?lat=${lat}&lon=${lon}`
       );
       
       if (!response.ok) {
@@ -28,26 +24,9 @@ class WeatherService {
   }
 
   async getWeatherByCity(city) {
-    try {
-      if (!this.apiKey) {
-        // OpenWeather API key не установлен
-        return this.getDefaultWeatherData();
-      }
-
-      const response = await fetch(
-        `${this.baseUrl}/weather?q=${encodeURIComponent(city)}&appid=${this.apiKey}&units=metric&lang=ru`
-      );
-      
-      if (!response.ok) {
-        throw new Error('Город не найден');
-      }
-
-      const data = await response.json();
-      return this.formatWeatherData(data);
-    } catch (error) {
-      console.error('Ошибка получения погоды:', error);
-      return this.getDefaultWeatherData();
-    }
+    // Получение погоды по городу через координаты (требует геокодинг на бэкенде)
+    // Пока возвращаем дефолтные данные
+    return this.getDefaultWeatherData();
   }
 
   formatWeatherData(data) {

@@ -8,7 +8,9 @@ import { createClient } from '@supabase/supabase-js';
 
 // Self-hosted Supabase URLs
 const SUPABASE_URL = 'https://lipolo.store';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoic2VydmljZV9yb2xlIiwiaXNzIjoic3VwYWJhc2UtZGVtbyIsImV4cCI6MTc4NDQwNjYyOSwiaWF0IjoxNzUyODcwNjI5fQ.WT3UG-bmbfetuQYAYr91n3tvqZAE49YhKJoJZbzxnQc';
+// ВАЖНО: Используем anon key из переменных окружения, а не service_role key!
+// Service_role key дает полный доступ к БД и НЕ должен использоваться на фронтенде
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
 // Создаем клиент Supabase
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {

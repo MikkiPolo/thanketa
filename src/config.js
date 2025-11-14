@@ -27,5 +27,6 @@ export const API_ENDPOINTS = {
   GET_LOOKS: '/looks',
   CHAT_STYLE: '/chat-style',
   CHAT_HISTORY: '/chat-style/history',
-  CONVERT_HEIC_PREVIEW: '/convert-heic-preview'
+  CONVERT_HEIC_PREVIEW: '/convert-heic-preview',
+  WEATHER: '/weather'
 };

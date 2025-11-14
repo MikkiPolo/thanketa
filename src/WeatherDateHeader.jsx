@@ -41,9 +41,9 @@ const WeatherDateHeader = ({ profile }) => {
 
     setLoading(true);
     try {
-      const apiKey = 'd69e489c7ddeb793bff2350cc232dab7';
+      const { BACKEND_URL, API_ENDPOINTS } = await import('./config.js');
       const response = await fetch(
-        `https://api.openweathermap.org/data/2.5/weather?lat=${profile.location_latitude}&lon=${profile.location_longitude}&appid=${apiKey}&units=metric&lang=ru`
+        `${BACKEND_URL}${API_ENDPOINTS.WEATHER}?lat=${profile.location_latitude}&lon=${profile.location_longitude}`
       );
       
       if (!response.ok) {

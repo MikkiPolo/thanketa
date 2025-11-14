@@ -213,7 +213,7 @@ const CapsulePage = ({ profile, onBack, initialCapsule = null, isFavoritesView =
 
     try {
       const response = await fetch(
-        `https://api.openweathermap.org/data/2.5/weather?lat=${profile.location_latitude}&lon=${profile.location_longitude}&appid=d69e489c7ddeb793bff2350cc232dab7&units=metric&lang=ru`
+        `${BACKEND_URL}${API_ENDPOINTS.WEATHER}?lat=${profile.location_latitude}&lon=${profile.location_longitude}`
       );
       if (response.ok) {
         return await response.json();
