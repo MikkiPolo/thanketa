@@ -8,8 +8,7 @@ if (!supabaseAnonKey) {
   console.warn('VITE_SUPABASE_ANON_KEY не установлен в переменных окружения')
 }
 
-console.log('Supabase URL:', supabaseUrl)
-console.log('Supabase Key:', supabaseAnonKey ? '***' + supabaseAnonKey.slice(-4) : 'undefined')
+// Supabase инициализирован (логирование отключено для безопасности)
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 

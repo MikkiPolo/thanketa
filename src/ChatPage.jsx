@@ -230,7 +230,6 @@ const ChatPage = ({ telegramId }) => {
           if (line.startsWith('data: ')) {
             try {
               const data = JSON.parse(line.slice(6));
-              console.log('📨 SSE событие:', data.type, data);
               
               if (data.type === 'thread_id') {
                 setThreadId(data.thread_id);

@@ -56,52 +56,26 @@ export const backendService = {
   // Анализ гардероба с AI - UPDATED 2024-08-06 23:35
   async analyzeWardrobeItem(imageFile, userId = 'anonymous') {
     try {
-      console.log('📤 BackendService: Отправляем изображение на анализ');
-      console.log('📤 BackendService: File details:', {
-        name: imageFile.name,
-        size: imageFile.size,
-        type: imageFile.type,
-        lastModified: imageFile.lastModified
-      });
-      
       const formData = new FormData();
       formData.append('image', imageFile);
       formData.append('user_id', userId);
 
       const url = `${BACKEND_URL}${API_ENDPOINTS.ANALYZE_WARDROBE}?v=${Date.now()}`;
-      console.log('📤 BackendService: URL запроса:', url);
-      console.log('📤 BackendService: BACKEND_URL:', BACKEND_URL);
-      console.log('📤 BackendService: API_ENDPOINTS.ANALYZE_WARDROBE:', API_ENDPOINTS.ANALYZE_WARDROBE);
-
-      console.log('📤 BackendService: Отправляем fetch запрос...');
       const response = await fetch(url, {
         method: 'POST',
         body: formData,
       });
 
-      console.log('📥 BackendService: Получен ответ:', {
-        status: response.status,
-        statusText: response.statusText,
-        ok: response.ok,
-        headers: Object.fromEntries(response.headers.entries())
-      });
-
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('❌ BackendService: HTTP error response:', errorText);
-        throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
+        console.error('Ошибка анализа гардероба:', response.status);
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       const result = await response.json();
-      console.log('✅ BackendService: Успешно получен JSON ответ:', {
-        success: result.success,
-        hasImage: !!result.image_base64,
-        hasAnalysis: !!result.analysis
-      });
-
       return result;
     } catch (error) {
-      console.error('❌ BackendService: Wardrobe analysis failed:', error);
+      console.error('Ошибка анализа гардероба:', error);
       console.error('❌ BackendService: Error details:', {
         message: error.message,
         name: error.name,

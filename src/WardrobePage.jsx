@@ -255,13 +255,13 @@ useEffect(() => {
             ) : (
               <>
                 {filteredWardrobe
-                  .filter(item => item && item.id && item.category)
-                  .map(item => (
-                    <div 
-                      key={item.id} 
-                      className="wardrobe-grid-item"
-                      onClick={() => handleItemClick(item)}
-                    >
+                .filter(item => item && item.id && item.category)
+                .map(item => (
+                  <div 
+                    key={item.id} 
+                    className="wardrobe-grid-item"
+                    onClick={() => handleItemClick(item)}
+                  >
                     <div className="wardrobe-item-icon">
                       {item.image_id ? (
                         <img 

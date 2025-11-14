@@ -30,8 +30,6 @@ import { normalizeText, validateAge, cleanAge } from './utils/textUtils';
 // удален дублирующийся массив questions вне компонента
 
 export default function App() {
-  console.log('🚀 App компонент начал рендеринг');
-  
   const [step, setStep] = useState(0);
   const [form, setForm] = useState({});
   const [currentPage, setCurrentPage] = useState('home');
@@ -39,8 +37,6 @@ export default function App() {
   const [tgId, setTgId] = useState(null);
   const [existingProfile, setExistingProfile] = useState(null);
   const [loading, setLoading] = useState(true);
-  
-  console.log('📊 App состояние инициализировано:', { tgId, loading, step });
   const [started, setStarted] = useState(false);
   const [viewing, setViewing] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -248,46 +244,35 @@ export default function App() {
       
       // 1. Пробуем получить из Telegram Web App API
       if (telegramWebApp.isAvailable) {
-        console.log('Telegram Web App доступен, инициализируем...');
         telegramWebApp.init();
         telegramWebApp.setupFullScreen(); // Настраиваем полный экран
         tg_id = telegramWebApp.getTelegramId();
-        console.log('Telegram ID из Web App:', tg_id);
       }
       
       // 2. Если не получилось, пробуем из URL параметра
       if (!tg_id) {
         const urlParams = new URLSearchParams(window.location.search);
         tg_id = urlParams.get("tg_id");
-        console.log('Telegram ID из URL:', tg_id);
       }
       
       // 3. Если все еще нет, пробуем из localStorage (для тестирования)
       if (!tg_id) {
         tg_id = localStorage.getItem('test_telegram_id');
-        console.log('Telegram ID из localStorage:', tg_id);
       }
       
-      console.log('Final tg_id:', tg_id);
-      console.log('Current tgId state:', tgId);
-      
       if (tg_id) {
-        console.log('Setting tgId to:', tg_id);
         setTgId(tg_id);
         
         // Проверяем кэш
         const cachedProfile = cache.get(`profile_${tg_id}`);
         if (cachedProfile) {
-          console.log('Found cached profile:', cachedProfile);
           setExistingProfile(cachedProfile);
           setLoading(false);
           return; // Выходим, если данные есть в кэше
         }
         
-        console.log('Fetching profile from Supabase...');
         try {
           const profile = await profileService.getProfile(tg_id);
-          console.log('Supabase response:', profile);
           setExistingProfile(profile);
           
           // Сохраняем в кэш
@@ -297,11 +282,10 @@ export default function App() {
           
           setLoading(false);
         } catch (error) {
-          console.error('Supabase error:', error);
+          console.error('Ошибка загрузки профиля:', error);
           setLoading(false);
         }
       } else {
-        console.log('No tg_id found from any source');
         // Устанавливаем loading в false, чтобы показать форму входа
         setLoading(false);
         setTgId(null); // Явно устанавливаем null, чтобы форма входа показалась
@@ -311,15 +295,6 @@ export default function App() {
     fetchProfile();
   }, []); // Убираем cache из зависимостей
 
-  // Отладочный useEffect для проверки состояния
-  useEffect(() => {
-    console.log('Current state:', {
-      tgId,
-      existingProfile,
-      loading,
-      viewingWardrobe
-    });
-  }, [tgId, existingProfile, loading, viewingWardrobe]);
   
   useEffect(() => {
   if (viewingWardrobe) {
@@ -379,8 +354,8 @@ export default function App() {
           await profileService.saveProfile(dataToSave);
 
           // Запрашиваем геолокацию после сохранения профиля (не блокируем, если пользователь откажет)
-          requestGeolocation().catch(err => {
-            console.warn('Геолокация не получена:', err);
+          requestGeolocation().catch(() => {
+            // Геолокация не получена - это нормально, не логируем
           });
 
           setStarted(false);
@@ -434,7 +409,6 @@ export default function App() {
 
   const handleAddItemAdded = (newItem) => {
     // Вещь добавлена, показываем уведомление
-    console.log('Item added:', newItem);
     showNotification('success', '', 'Вещь успешно добавлена в гардероб!');
     setShowAddModal(false);
   };
@@ -452,7 +426,6 @@ export default function App() {
   };
 
   const handleAddWardrobeItemAdded = (newItem) => {
-    console.log('Wardrobe item added:', newItem);
     showNotification('success', '', 'Вещь успешно добавлена в гардероб!');
     setShowAddWardrobeItem(false);
   };
@@ -462,7 +435,6 @@ export default function App() {
   };
 
   const handleTelegramIdSet = (newTgId) => {
-    console.log('Setting Telegram ID from debugger:', newTgId);
     setTgId(newTgId);
     // Перезагружаем профиль с новым ID
     const fetchProfile = async () => {
@@ -495,20 +467,7 @@ export default function App() {
 
   // Показываем форму входа если нет tgId И загрузка завершена
   // ВАЖНО: эта проверка должна быть ПЕРВОЙ, до любых обращений к questions или другим данным
-  console.log('🔍 Проверка условий:', { 
-    tgId, 
-    loading, 
-    shouldShowLogin: !tgId && !loading, 
-    started, 
-    viewing, 
-    editing,
-    questionsDefined: !!questions,
-    stepValue: step
-  });
-  
-  // КРИТИЧЕСКИ ВАЖНО: эта проверка должна быть ПЕРВОЙ
   if (!tgId && !loading) {
-    console.log('✅ Показываем форму входа - условие выполнено!');
     return (
       <ErrorBoundary>
         <div className={`app ${telegramWebApp.isAvailable ? 'telegram-webapp' : ''}`}>
@@ -598,7 +557,7 @@ export default function App() {
   // Теперь безопасно можем обращаться к questions, так как проверки на вход и загрузку пройдены
   // НО! Проверяем, что questions определен, иначе будет ошибка
   if (!questions || !questions[step]) {
-    console.error('❌ КРИТИЧЕСКАЯ ОШИБКА: questions не определен!', { questions, step });
+    console.error('Ошибка инициализации: questions не определен');
     return (
       <ErrorBoundary>
         <div className={`app ${telegramWebApp.isAvailable ? 'telegram-webapp' : ''}`}>
