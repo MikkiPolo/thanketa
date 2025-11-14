@@ -13,6 +13,8 @@ services:
     volumes:
       - ./logs:/app/logs
       - ./uploads:/app/uploads
+    env_file:
+      - ./backend/.env
     environment:
       - AI_GENERATOR_TYPE=gpt
       - AI_MODEL_NAME=gpt-4o-mini
