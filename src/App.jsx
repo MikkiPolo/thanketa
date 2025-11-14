@@ -592,6 +592,22 @@ export default function App() {
   }
 
   // Теперь безопасно можем обращаться к questions, так как проверки на вход и загрузку пройдены
+  // НО! Проверяем, что questions определен, иначе будет ошибка
+  if (!questions || !questions[step]) {
+    console.error('❌ КРИТИЧЕСКАЯ ОШИБКА: questions не определен!', { questions, step });
+    return (
+      <ErrorBoundary>
+        <div className={`app ${telegramWebApp.isAvailable ? 'telegram-webapp' : ''}`}>
+          <div className="card">
+            <h2>Ошибка инициализации</h2>
+            <p>Пожалуйста, обновите страницу</p>
+            <button onClick={() => window.location.reload()}>Обновить</button>
+          </div>
+        </div>
+      </ErrorBoundary>
+    );
+  }
+  
   const { title, hint, field } = questions[step];
   const progress = ((step + 1) / questions.length) * 100;
 
