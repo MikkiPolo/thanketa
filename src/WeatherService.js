@@ -1,7 +1,6 @@
 class WeatherService {
   constructor() {
-    this.apiKey = import.meta.env.VITE_OPENWEATHER_API_KEY || '';
-    this.baseUrl = 'https://api.openweathermap.org/data/2.5';
+    // API ключ больше не используется на фронтенде - запросы идут через бэкенд
   }
 
   async getWeatherByLocation(lat, lon) {
