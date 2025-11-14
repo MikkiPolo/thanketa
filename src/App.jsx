@@ -6,6 +6,7 @@ import CapsulePage from './CapsulePage';
 import FavoritesPage from './FavoritesPage';
 import ProfilePage from './ProfilePage';
 import ShopPage from './ShopPage';
+import ChatPage from './ChatPage';
 import ProfileMenuModal from './ProfileMenuModal';
 
 import BottomNavigation from './BottomNavigation';
@@ -195,6 +196,46 @@ export default function App() {
     }
   }, [tgId, editForm]);
 
+  // Функция для получения геолокации
+  const requestGeolocation = useCallback(async () => {
+    if (!navigator.geolocation) {
+      console.warn('Геолокация не поддерживается вашим браузером');
+      return null;
+    }
+
+    return new Promise((resolve) => {
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const { latitude, longitude } = position.coords;
+          console.log('📍 Геолокация получена:', latitude, longitude);
+          
+          try {
+            // Сохраняем координаты в профиль
+            await profileService.saveProfile({
+              telegram_id: tgId,
+              location_latitude: latitude,
+              location_longitude: longitude
+            });
+            console.log('✅ Координаты сохранены в профиль');
+            resolve({ latitude, longitude });
+          } catch (error) {
+            console.error('❌ Ошибка сохранения координат:', error);
+            resolve(null);
+          }
+        },
+        (error) => {
+          console.warn('⚠️ Пользователь не предоставил доступ к геолокации:', error.message);
+          resolve(null);
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0
+        }
+      );
+    });
+  }, [tgId]);
+
 
 
   useEffect(() => {
@@ -325,50 +366,11 @@ export default function App() {
           }
           
           await profileService.saveProfile(dataToSave);
-          const inWebApp = telegramWebApp.isAvailable;
-          if (!inWebApp) {
-            alert("Анкета сохранена!\n\nМожешь закрыть эту страницу.");
-          }
 
-          // Отправить сообщение с кнопками (локация / не отправлять)
-          try {
-            const telegramBotToken = import.meta.env.VITE_TELEGRAM_BOT_TOKEN;
-            if (!telegramBotToken) {
-              console.warn('VITE_TELEGRAM_BOT_TOKEN не установлен');
-            } else {
-              await fetch(`https://api.telegram.org/bot${telegramBotToken}/sendMessage`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  chat_id: tgId,
-                  text: `📍 Чтобы мои советы были по-настоящему полезными, важно знать, в каком климате ты живёшь.
-
-Это поможет учитывать сезон и подбирать одежду, которая будет комфортной в твоей погоде 🌦
-
-👇 Пожалуйста, нажми на кнопку ниже и отправь свою геолокацию:
-
-📌 Не хочешь делиться локацией? Всё в порядке!
-
-👗 Если позже захочешь, чтобы я составила образы — пришли мне текущие погодные условия, и я подберу луки под них.`,
-                  reply_markup: {
-                    keyboard: [
-                      [
-                        { text: "📍 Отправить локацию", request_location: true },
-                        { text: "🚫 Не отправлять локацию" }
-                      ]
-                    ],
-                    resize_keyboard: true,
-                    one_time_keyboard: true
-                  }
-                })
-              });
-            }
-          } catch (e) {
-            console.warn('Не удалось отправить сообщение в Telegram:', e);
-          }
-
-          // Внутри Telegram WebApp закрываем приложение автоматически
-          try { if (inWebApp) telegramWebApp.close(); } catch (_) {}
+          // Запрашиваем геолокацию после сохранения профиля (не блокируем, если пользователь откажет)
+          requestGeolocation().catch(err => {
+            console.warn('Геолокация не получена:', err);
+          });
 
           setStarted(false);
           setExistingProfile({ name: form.name });
@@ -771,6 +773,12 @@ export default function App() {
               season={existingProfile?.season || 'Осень'}
               temperature={15.0}
               onBack={() => setCurrentPage('home')}
+            />
+          )}
+
+          {currentPage === 'chat' && (
+            <ChatPage 
+              telegramId={existingProfile?.telegram_id || tgId || 'default'}
             />
           )}
 

@@ -4,15 +4,7 @@ import { Home, Shirt, Sparkles, Heart, MessageCircle, ShoppingBag } from 'lucide
 const BottomNavigation = ({ activePage, onPageChange }) => {
   const barRef = useRef(null);
 
-  const handleChatClick = () => {
-    // Отправляем сообщение в чат и закрываем приложение
-    if (window.Telegram?.WebApp) {
-      window.Telegram.WebApp.sendData(JSON.stringify({
-        message: "Прошу, спрашивай, что тебе интересно"
-      }));
-      window.Telegram.WebApp.close();
-    }
-  };
+  // Убрали handleChatClick - теперь чат открывается как обычная страница
 
   useEffect(() => {
     const root = document.documentElement;
@@ -46,7 +38,7 @@ const BottomNavigation = ({ activePage, onPageChange }) => {
     { id: 'wardrobe', icon: Shirt, label: 'Гардероб' },
     { id: 'capsules', icon: Sparkles, label: 'Капсулы' },
     { id: 'favorites', icon: Heart, label: 'Избранное' },
-    { id: 'chat', icon: MessageCircle, label: 'Чат', isSpecial: true },
+    { id: 'chat', icon: MessageCircle, label: 'Чат' },
     { id: 'shop', icon: ShoppingBag, label: 'Магазин' }
   ];
 
@@ -61,11 +53,7 @@ const BottomNavigation = ({ activePage, onPageChange }) => {
             key={item.id}
             className={`nav-item ${isActive ? 'active' : ''}`}
             onClick={() => {
-              if (item.isSpecial) {
-                handleChatClick();
-              } else {
-                onPageChange(item.id);
-              }
+              onPageChange(item.id);
             }}
           >
             <IconComponent 

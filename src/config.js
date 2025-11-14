@@ -24,5 +24,7 @@ export const API_ENDPOINTS = {
   AI_PERFORMANCE: '/ai-performance',
   AI_EXPLANATION: '/ai-explanation',
   WARDROBE_RECOMMENDATIONS: '/wardrobe-recommendations',
-  GET_LOOKS: '/looks'
+  GET_LOOKS: '/looks',
+  CHAT_STYLE: '/chat-style',
+  CONVERT_HEIC_PREVIEW: '/convert-heic-preview'
 };
