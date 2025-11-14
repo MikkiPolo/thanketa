@@ -488,69 +488,56 @@ export default function App() {
     return (
       <ErrorBoundary>
         <div className={`app ${telegramWebApp.isAvailable ? 'telegram-webapp' : ''}`}>
-          <div className="card">
-            <div className="error-content" style={{ textAlign: 'center', padding: '2rem' }}>
-              <h2>Вход в приложение</h2>
-              <p style={{ marginBottom: '2rem', color: 'var(--color-text-light)' }}>
-                {telegramWebApp.isAvailable 
-                  ? 'Не удалось получить данные из Telegram' 
-                  : 'Для доступа к приложению необходим Telegram ID'}
-              </p>
+          <div className="card login-card">
+            <div className="login-content">
+              <div className="login-header">
+                <h1>GLAMORA</h1>
+                <p className="login-subtitle">Вход в приложение</p>
+              </div>
               
-              {/* Форма ввода Telegram ID */}
-              <form onSubmit={handleTelegramIdSubmit} style={{ maxWidth: '400px', margin: '0 auto' }}>
-                <div style={{ marginBottom: '1rem' }}>
+              <form onSubmit={handleTelegramIdSubmit} className="login-form">
+                <div className="login-input-group">
+                  <label htmlFor="telegram-id" className="login-label">
+                    Telegram ID
+                  </label>
                   <input
+                    id="telegram-id"
                     type="text"
                     value={inputTelegramId}
                     onChange={(e) => setInputTelegramId(e.target.value)}
                     placeholder="Введите ваш Telegram ID"
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem 1rem',
-                      border: '1px solid var(--border-color)',
-                      borderRadius: '8px',
-                      fontSize: '1rem',
-                      backgroundColor: 'var(--input-bg)',
-                      color: 'var(--input-text)',
-                      boxSizing: 'border-box'
-                    }}
+                    className="login-input"
                     autoFocus
+                    required
                   />
+                  <p className="login-hint">
+                    {telegramWebApp.isAvailable 
+                      ? 'Не удалось получить данные из Telegram автоматически' 
+                      : 'Введите ваш Telegram ID для доступа к приложению'}
+                  </p>
                 </div>
+                
                 <button
                   type="submit"
-                  className="btn-primary"
+                  className="btn-primary login-button"
                   disabled={!inputTelegramId.trim()}
-                  style={{ width: '100%', padding: '0.75rem' }}
                 >
                   Войти
                 </button>
               </form>
 
-              <p style={{ marginTop: '1.5rem', fontSize: '0.875rem', color: 'var(--color-text-light)' }}>
-                Или добавьте <code style={{ 
-                  padding: '0.2rem 0.4rem', 
-                  backgroundColor: 'var(--hint-bg)', 
-                  borderRadius: '4px',
-                  fontSize: '0.875rem'
-                }}>?tg_id=ваш_id</code> к URL
-              </p>
+              <div className="login-footer">
+                <p className="login-footer-text">
+                  Или добавьте <code>?tg_id=ваш_id</code> к URL
+                </p>
+              </div>
               
               {/* Debugger для разработки */}
               {import.meta.env.DEV && (
-                <div style={{ marginTop: '2rem', paddingTop: '2rem', borderTop: '1px solid var(--border-color)' }}>
+                <div className="login-debugger">
                   <button 
                     onClick={() => setShowDebugger(!showDebugger)}
-                    style={{ 
-                      padding: '0.5rem 1rem', 
-                      backgroundColor: '#007bff', 
-                      color: 'white', 
-                      border: 'none', 
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                      fontSize: '0.875rem'
-                    }}
+                    className="debugger-toggle"
                   >
                     {showDebugger ? 'Скрыть' : 'Показать'} Debugger
                   </button>
