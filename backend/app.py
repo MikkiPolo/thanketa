@@ -2019,6 +2019,77 @@ def convert_heic_preview():
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
+@app.route('/chat-style/history', methods=['GET', 'OPTIONS'])
+def chat_history():
+    """
+    Получение истории сообщений из thread
+    
+    Query params:
+    - thread_id: ID thread для получения истории
+    - telegram_id: ID пользователя для проверки доступа
+    """
+    try:
+        if request.method == 'OPTIONS':
+            return ('', 204)
+        
+        thread_id = request.args.get('thread_id')
+        telegram_id = request.args.get('telegram_id')
+        
+        if not thread_id:
+            return jsonify({'error': 'thread_id required'}), 400
+        
+        api_key = os.getenv('OPENAI_API_KEY')
+        if not api_key:
+            return jsonify({'error': 'OpenAI API key not configured'}), 500
+        
+        client = openai.OpenAI(api_key=api_key)
+        
+        # Получаем сообщения из thread
+        messages = client.beta.threads.messages.list(
+            thread_id=thread_id,
+            limit=100  # Получаем до 100 последних сообщений
+        )
+        
+        # Преобразуем сообщения в формат для фронтенда
+        formatted_messages = []
+        for msg in messages.data:
+            role = msg.role
+            content_text = ''
+            image_url = None
+            
+            # Извлекаем текст и изображения из content
+            if hasattr(msg, 'content') and msg.content:
+                for content_block in msg.content:
+                    if hasattr(content_block, 'type'):
+                        if content_block.type == 'text':
+                            if hasattr(content_block, 'text') and hasattr(content_block.text, 'value'):
+                                content_text += content_block.text.value
+                        elif content_block.type == 'image_file':
+                            if hasattr(content_block, 'image_file') and hasattr(content_block.image_file, 'file_id'):
+                                # Для изображений можно вернуть file_id или загрузить файл
+                                image_url = f"file_id:{content_block.image_file.file_id}"
+            
+            if content_text or image_url:
+                formatted_messages.append({
+                    'role': role,
+                    'content': content_text,
+                    'image_url': image_url
+                })
+        
+        # Сортируем по времени (старые первыми)
+        formatted_messages.reverse()
+        
+        return jsonify({
+            'messages': formatted_messages,
+            'thread_id': thread_id
+        })
+        
+    except Exception as e:
+        print(f"❌ Ошибка получения истории: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/chat-style', methods=['POST', 'OPTIONS'])
 def chat_style():
     """
@@ -2115,33 +2186,23 @@ def chat_style():
         client = openai.OpenAI(api_key=api_key)
         assistant_id = 'asst_mn2FIw7vNCgGbnuud4m71BUN'
         
-        # Получаем данные пользователя из Supabase
-        user_context = ""
+        # Получаем данные пользователя из Supabase (только для логирования, НЕ отправляем в сообщении)
+        # Ассистент уже имеет доступ к этой информации через свой промпт и инструменты
         try:
             from brand_service_v4 import get_supabase_client
             supabase = get_supabase_client()
             if supabase:
-                # Получаем профиль пользователя
+                # Получаем профиль пользователя (только для логирования)
                 profile_response = supabase.table('user_profile').select('*').eq('telegram_id', telegram_id).execute()
                 if profile_response.data:
                     profile = profile_response.data[0]
-                    user_context = f"""
-Данные пользователя из анкеты:
-- Фигура: {profile.get('figura', 'не указано')}
-- Цветотип: {profile.get('cvetotip', 'не указано')}
-- Стиль жизни: {profile.get('stil_zhizni', 'не указано')}
-- Цели: {profile.get('celi', 'не указано')}
-- Предпочтения: {profile.get('predpochtenia', 'не указано')}
-"""
+                    print(f"📋 Профиль пользователя {telegram_id}: {profile.get('figura', 'не указано')}, {profile.get('cvetotip', 'не указано')}")
                 
-                # Получаем гардероб, если запрошен
+                # Получаем гардероб, если запрошен (только для логирования)
                 if include_wardrobe:
                     wardrobe_response = supabase.table('wardrobe').select('id, category, description, season').eq('telegram_id', telegram_id).execute()
                     if wardrobe_response.data:
-                        wardrobe_items = wardrobe_response.data
-                        user_context += f"\nГардероб пользователя ({len(wardrobe_items)} вещей):\n"
-                        for item in wardrobe_items[:50]:  # Ограничиваем до 50 вещей
-                            user_context += f"- {item.get('category', '')}: {item.get('description', '')[:100]}\n"
+                        print(f"📋 Гардероб пользователя: {len(wardrobe_response.data)} вещей")
         except Exception as e:
             print(f"⚠️ Ошибка получения данных пользователя: {e}")
         
@@ -2178,14 +2239,10 @@ def chat_style():
                 thread = client.beta.threads.create()
                 thread_id = thread.id
         
-        # Формируем сообщение с контекстом (без промпта - он уже есть у ассистента)
-        # ВАЖНО: Добавляем telegram_id в контекст, чтобы ассистент мог его использовать при вызове инструментов
+        # Формируем сообщение - отправляем ТОЛЬКО вопрос пользователя
+        # Системная информация (профиль, telegram_id) НЕ должна отправляться как часть сообщения
+        # Ассистент уже имеет доступ к этой информации через свой промпт и инструменты
         full_message = message
-        if user_context:
-            full_message = f"{user_context}\n\nВопрос пользователя: {message}"
-        
-        # Добавляем telegram_id в контекст для инструментов
-        full_message += f"\n\n[Системная информация: telegram_id пользователя = {telegram_id}. Используй этот telegram_id при вызове инструментов about_user, wardrobe, get_weather, recommend.]"
         
         # Создаем сообщение в thread
         # ВАЖНО: Для Assistants API изображение должно быть ПЕРЕД текстом

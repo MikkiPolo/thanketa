@@ -7,7 +7,11 @@ const ChatPage = ({ telegramId }) => {
   const [messages, setMessages] = useState([]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [threadId, setThreadId] = useState(null);
+  const [threadId, setThreadId] = useState(() => {
+    // Загружаем threadId из localStorage при инициализации
+    const savedThreadId = localStorage.getItem(`chat_thread_${telegramId}`);
+    return savedThreadId || null;
+  });
   const [selectedImage, setSelectedImage] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const messagesEndRef = useRef(null);
@@ -23,6 +27,40 @@ const ChatPage = ({ telegramId }) => {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Загружаем историю сообщений при монтировании, если есть threadId
+  useEffect(() => {
+    const loadChatHistory = async () => {
+      if (!threadId || !telegramId) return;
+      
+      try {
+        console.log('📜 Загрузка истории чата для thread:', threadId);
+        const response = await fetch(`${BACKEND_URL}${API_ENDPOINTS.CHAT_HISTORY}?thread_id=${threadId}&telegram_id=${telegramId}`);
+        
+        if (!response.ok) {
+          console.warn('⚠️ Не удалось загрузить историю:', response.status);
+          return;
+        }
+        
+        const data = await response.json();
+        if (data.messages && Array.isArray(data.messages)) {
+          console.log('✅ Загружено сообщений:', data.messages.length);
+          // Преобразуем сообщения из формата OpenAI в формат компонента
+          const formattedMessages = data.messages.map((msg, idx) => ({
+            id: Date.now() - (data.messages.length - idx) * 1000, // Уникальные ID
+            role: msg.role,
+            text: msg.content || '',
+            image: msg.image_url || null
+          }));
+          setMessages(formattedMessages);
+        }
+      } catch (error) {
+        console.error('❌ Ошибка загрузки истории:', error);
+      }
+    };
+    
+    loadChatHistory();
+  }, [threadId, telegramId]);
 
   // Автоматическое изменение высоты textarea
   const adjustTextareaHeight = () => {
@@ -196,6 +234,8 @@ const ChatPage = ({ telegramId }) => {
               
               if (data.type === 'thread_id') {
                 setThreadId(data.thread_id);
+                // Сохраняем threadId в localStorage для восстановления при следующем открытии
+                localStorage.setItem(`chat_thread_${telegramId}`, data.thread_id);
               } else if (data.type === 'text_delta') {
                 // Убираем индикатор "думает" при первом тексте и добавляем новый текст
                 setMessages(prev => {
