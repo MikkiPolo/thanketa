@@ -471,7 +471,9 @@ export default function App() {
           <div className="card login-card">
             <div className="login-content">
               <div className="login-header">
-                <h1>GLAMORA</h1>
+                <div className="logo" style={{ marginTop: "1rem", marginBottom: "1.5rem" }}>
+                  <img src={theme === 'dark' ? "/vite1.svg" : "/vite.svg"} alt="logo" className="logo-img" />
+                </div>
                 <p className="login-subtitle">Вход в приложение</p>
               </div>
               
