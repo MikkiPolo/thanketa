@@ -27,12 +27,6 @@ const AddWardrobeItem = ({ telegramId, onItemAdded, onClose }) => {
     try {
       const file = event.target.files[0];
       if (file) {
-        console.log('Selected file:', {
-          name: file.name,
-          type: file.type,
-          size: file.size
-        });
-        
         setImageFile(file);
         setStep('processing');
         processImage(file);
@@ -49,13 +43,6 @@ const AddWardrobeItem = ({ telegramId, onItemAdded, onClose }) => {
   // Обработка изображения
   const processImage = async (file) => {
     try {
-      console.log('🚀 Начинаем обработку изображения:', {
-        name: file.name,
-        type: file.type,
-        size: file.size,
-        lastModified: file.lastModified
-      });
-      
       // Проверяем размер файла перед обработкой
       const maxSize = 10 * 1024 * 1024; // 10MB
       if (file.size > maxSize) {
@@ -67,21 +54,11 @@ const AddWardrobeItem = ({ telegramId, onItemAdded, onClose }) => {
         throw new Error('Выбранный файл не является изображением');
       }
       
-      console.log('✅ Валидация файла прошла успешно');
-      
       setShowLoadingModal(true);
       setError(null);
       
-      console.log('📡 Отправляем запрос к backend...');
-      
       // Анализируем изображение с AI
       const result = await backendService.analyzeWardrobeItem(file);
-      
-      console.log('📥 Получен ответ от backend:', {
-        success: result.success,
-        hasImage: !!result.image_base64,
-        hasAnalysis: !!result.analysis
-      });
       
       if (result.success) {
         setProcessedImage(result.image_base64);
@@ -94,19 +71,12 @@ const AddWardrobeItem = ({ telegramId, onItemAdded, onClose }) => {
           description: normalizeText(result.analysis.description || '')
         });
         
-        console.log('✅ Обработка завершена успешно, переходим к редактированию');
         setStep('edit');
       } else {
-        console.error('❌ Ошибка в ответе backend:', result);
         throw new Error(result.error || 'Неизвестная ошибка при обработке изображения');
       }
     } catch (error) {
-      console.error('❌ Image processing failed:', error);
-      console.error('❌ Error details:', {
-        message: error.message,
-        stack: error.stack,
-        name: error.name
-      });
+      console.error('Ошибка обработки изображения:', error.message);
       
       let errorMessage = 'Ошибка обработки изображения';
       
@@ -126,7 +96,6 @@ const AddWardrobeItem = ({ telegramId, onItemAdded, onClose }) => {
         errorMessage = 'Ошибка обработки изображения: ' + error.message;
       }
       
-      console.log('💬 Показываем пользователю ошибку:', errorMessage);
       setError(errorMessage);
       setStep('select');
     } finally {
@@ -152,13 +121,11 @@ const AddWardrobeItem = ({ telegramId, onItemAdded, onClose }) => {
       const imageBlob = backendService.base64ToBlob(processedImage);
       
       // Агрессивно сжимаем изображение перед загрузкой
-      console.log('Compressing image...');
       let compressedBlob;
       try {
         compressedBlob = await backendService.aggressiveCompressImage(imageBlob);
-        console.log('Image compressed:', compressedBlob.size, 'bytes');
       } catch (compressionError) {
-        console.error('Compression failed:', compressionError);
+        console.error('Ошибка сжатия изображения:', compressionError);
         throw new Error('Не удалось сжать изображение. Попробуйте другое изображение.');
       }
       

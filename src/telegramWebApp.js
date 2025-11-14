@@ -8,7 +8,6 @@ class TelegramWebApp {
   // Инициализация Web App
   init() {
     if (!this.isAvailable) {
-      console.log('Telegram Web App не доступен');
       return false;
     }
 
@@ -53,7 +52,6 @@ class TelegramWebApp {
           updateVisualViewport();
         }
       } catch (e) { /* ignore */ }
-      console.log('Telegram Web App инициализирован');
       return true;
     } catch (error) {
       console.error('Ошибка инициализации Telegram Web App:', error);
@@ -109,21 +107,18 @@ class TelegramWebApp {
     try {
       const initData = this.webApp.initData;
       if (!initData) {
-        console.warn('initData отсутствует');
         return false;
       }
       
       // Проверяем наличие обязательных полей
       const user = this.webApp.initDataUnsafe?.user;
       if (!user || !user.id) {
-        console.warn('Пользовательские данные отсутствуют или неполные');
         return false;
       }
       
       // В продакшене здесь должна быть проверка HMAC-SHA256 подписи
       // Для безопасности нужно проверять подпись от Telegram
       if (import.meta.env.PROD) {
-        console.warn('В продакшене требуется проверка HMAC-SHA256 подписи');
         // TODO: Реализовать проверку подписи
         // const isValid = this.validateSignature(initData, this.webApp.initDataUnsafe);
         // return isValid;

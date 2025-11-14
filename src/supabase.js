@@ -5,7 +5,7 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://lipolo.store'
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || ''
 
 if (!supabaseAnonKey) {
-  console.warn('VITE_SUPABASE_ANON_KEY не установлен в переменных окружения')
+  // VITE_SUPABASE_ANON_KEY не установлен (логирование отключено для безопасности)
 }
 
 // Supabase инициализирован (логирование отключено для безопасности)

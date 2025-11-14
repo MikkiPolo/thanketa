@@ -51,18 +51,9 @@ const WardrobePage = ({ telegramId, access, onBack, profile }) => {
 // Удалён бесполезный useEffect со скроллом
 
 useEffect(() => {
-  console.log('WardrobePage useEffect:', { telegramId, access, hasFetched: hasFetched.current });
   if (!hasFetched.current && telegramId && (access === 'full' || access === 'demo')) {
-    console.log('Access granted, fetching wardrobe...');
     hasFetched.current = true;
     fetchWardrobe();
-  } else {
-    console.log('Access check failed:', { 
-      hasFetched: hasFetched.current, 
-      telegramId: !!telegramId, 
-      access: access,
-      hasAccess: access === 'full' || access === "full"
-    });
   }
 }, [telegramId, access, fetchWardrobe]); // Добавляем fetchWardrobe в зависимости
 
@@ -135,7 +126,6 @@ useEffect(() => {
 
   const handleImageUpload = async (images) => {
     // Здесь можно добавить логику для сохранения изображений
-    console.log('Uploaded images:', images);
     
     // Пока что просто показываем уведомление
     alert('Функция загрузки изображений в разработке');

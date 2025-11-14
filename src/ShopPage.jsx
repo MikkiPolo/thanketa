@@ -20,7 +20,6 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
 
       // Запрос к публичному API
       const apiUrl = `https://linapolo.ru/api/public/items/capsule?season=${season}`;
-      console.log('📡 Загружаем товары брендов:', apiUrl);
 
       const response = await fetch(apiUrl, {
         method: 'GET',
@@ -36,7 +35,6 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
       const data = await response.json();
       const brandItems = data.items || [];
 
-      console.log('✅ Загружено товаров брендов:', brandItems.length);
       setItems(brandItems);
     } catch (err) {
       console.error('❌ Ошибка загрузки товаров брендов:', err);
@@ -52,7 +50,6 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
     // Отправляем impression ТОЛЬКО при открытии детального просмотра
     if (window.brandItemsService) {
       window.brandItemsService.trackImpression(item.id, telegramId);
-      console.log('📊 Impression tracked for item:', item.id);
     }
   };
 

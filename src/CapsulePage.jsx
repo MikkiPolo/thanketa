@@ -98,7 +98,6 @@ const CapsulePage = ({ profile, onBack, initialCapsule = null, isFavoritesView =
       }
 
       const favoritesData = await favoritesService.getFavorites(profile.telegram_id);
-      console.log('📦 Получены данные из Supabase:', favoritesData);
       
       // Преобразуем данные из Supabase в нужный формат
       const formattedFavorites = favoritesData.map(fav => ({
@@ -113,19 +112,17 @@ const CapsulePage = ({ profile, onBack, initialCapsule = null, isFavoritesView =
         addedAt: fav.created_at
       }));
       
-      console.log('📱 Форматированные избранные капсулы:', formattedFavorites);
       setFavorites(formattedFavorites);
     } catch (error) {
-      console.error('❌ Ошибка загрузки избранного:', error);
+      console.error('Ошибка загрузки избранного:', error);
       // Fallback к localStorage если Supabase недоступен
       try {
         const savedFavorites = localStorage.getItem(`favorites_${profile.telegram_id}`);
         if (savedFavorites) {
-          console.log('💾 Загружаем из localStorage как fallback');
           setFavorites(JSON.parse(savedFavorites));
         }
       } catch (localError) {
-        console.error('❌ Ошибка загрузки из localStorage:', localError);
+        console.error('Ошибка загрузки из localStorage:', localError);
       }
     }
   };
@@ -157,14 +154,12 @@ const CapsulePage = ({ profile, onBack, initialCapsule = null, isFavoritesView =
         // Проверяем, что кэш не устарел (24 часа)
         const cacheTime = localStorage.getItem(`cached_capsules_time_${profile.telegram_id}`);
         if (cacheTime && (Date.now() - parseInt(cacheTime)) < 24 * 60 * 60 * 1000) {
-          console.log('📦 Загружаем капсулы из кэша');
           setCapsules(parsedCapsules);
           setLoading(false);
           return;
         }
       }
       // Если кэша нет или он устарел, показываем пустую страницу
-      console.log('📭 Кэш пуст или устарел');
       setCapsules(null);
       setLoading(false);
     } catch (error) {
@@ -179,7 +174,6 @@ const CapsulePage = ({ profile, onBack, initialCapsule = null, isFavoritesView =
       setLoading(true);
       // При обновлении скрываем текущие капсулы, чтобы не мигало и пользователь не видел старые
       setCapsules(null);
-      console.log('🔄 Начинаем генерацию капсул...');
       
       // Получаем гардероб пользователя
       const wardrobe = await wardrobeService.getWardrobe(profile.telegram_id);
@@ -190,18 +184,13 @@ const CapsulePage = ({ profile, onBack, initialCapsule = null, isFavoritesView =
       const weather = await fetchWeather();
       
       // Генерируем капсулы на основе гардероба, анкеты и погоды
-      console.log('📡 Отправляем запрос к бэкенду...');
       const generatedCapsules = await generateCapsulesFromWardrobe(eligibleWardrobe, profile, weather, { forceRefresh: true });
-      
-      console.log('✅ Капсулы успешно сгенерированы!');
-      console.log('🛍️ Товары брендов уже подмешаны бэкендом');
       
       setCapsules(generatedCapsules);
       
       // Сохраняем в кэш
       localStorage.setItem(`cached_capsules_${profile.telegram_id}`, JSON.stringify(generatedCapsules));
       localStorage.setItem(`cached_capsules_time_${profile.telegram_id}`, Date.now().toString());
-      console.log('💾 Капсулы сохранены в кэш');
     } catch (error) {
       console.error('Ошибка при генерации капсул:', error);
       
@@ -335,7 +324,6 @@ const CapsulePage = ({ profile, onBack, initialCapsule = null, isFavoritesView =
 
         if (response.ok) {
           const result = await response.json();
-          console.log('Ответ от бэкенда:', result);
           if (result?.meta?.insufficient) {
             alert('Недостаточно подходящих вещей для создания капсул. Добавьте больше вещей в гардероб. Пока мы показываем стильные образы с товарами партнеров');
           }

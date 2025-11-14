@@ -20,8 +20,6 @@ class BrandItemsService {
    */
   async getItemsForCategory(category, season, limit = 5) {
     try {
-      console.log(`🔍 Loading brand items: ${category} / ${season} (limit: ${limit})`);
-      
       // Запрос к Supabase с балансировкой показов
       const { data, error } = await supabase
         .from('brand_items')
@@ -39,7 +37,6 @@ class BrandItemsService {
       }
       
       if (!data || data.length === 0) {
-        console.warn(`⚠️ No brand items found for ${category} / ${season}`);
         return [];
       }
       
@@ -54,7 +51,6 @@ class BrandItemsService {
       // Обеспечить разнообразие брендов (макс 1-2 товара от бренда)
       const result = this._ensureBrandDiversity(enrichedItems, limit);
       
-      console.log(`✅ Loaded ${result.length} brand items`);
       return result;
       
     } catch (error) {

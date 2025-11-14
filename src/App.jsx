@@ -199,7 +199,7 @@ export default function App() {
   // Функция для получения геолокации
   const requestGeolocation = useCallback(async () => {
     if (!navigator.geolocation) {
-      console.warn('Геолокация не поддерживается вашим браузером');
+      // Геолокация не поддерживается
       return null;
     }
 
