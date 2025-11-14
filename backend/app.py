@@ -1804,7 +1804,7 @@ def handle_tool_call(tool_name: str, tool_args: dict, telegram_id: str, openai_c
             
             wardrobe_response = supabase.table('wardrobe').select('id, category, description, season').eq('telegram_id', telegram_id).execute()
             if wardrobe_response.data:
-                wardrobe_items = wardrobe_response.data[:100]  # Ограничиваем до 100 вещей
+                wardrobe_items = wardrobe_response.data  # Возвращаем все вещи без ограничений
                 return json.dumps({
                     "items": [
                         {

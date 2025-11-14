@@ -136,6 +136,68 @@
   border: 1px solid #fcc;
 }
 
+.error-content {
+  text-align: center;
+  padding: 2rem;
+}
+
+.error-content h2 {
+  margin-bottom: 1rem;
+  color: var(--color-text-primary);
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.error-content p {
+  margin-bottom: 0.5rem;
+  color: var(--color-text-light);
+  line-height: 1.5;
+}
+
+.error-content form {
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+.error-content input[type="text"] {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  font-size: 1rem;
+  background-color: var(--input-bg);
+  color: var(--input-text);
+  box-sizing: border-box;
+  margin-bottom: 1rem;
+}
+
+.error-content input[type="text"]:focus {
+  outline: none;
+  border-color: var(--color-accent);
+}
+
+.error-content code {
+  padding: 0.2rem 0.4rem;
+  background-color: var(--hint-bg);
+  border-radius: 4px;
+  font-size: 0.875rem;
+  font-family: 'Courier New', monospace;
+  color: var(--color-text-primary);
+}
+
+/* Адаптация для десктопа */
+@media (min-width: 768px) {
+  .error-content {
+    padding: 3rem;
+    max-width: 500px;
+    margin: 0 auto;
+  }
+
+  .error-content form {
+    max-width: 450px;
+  }
+}
+
 /* Camera Styles */
 .camera-step {
   text-align: center;
@@ -4370,6 +4432,164 @@ html {
 .chat-input:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+/* ============================================
+   ДЕСКТОПНАЯ ВЕРСИЯ (Desktop Styles)
+   ============================================ */
+
+@media (min-width: 768px) {
+  /* Исправление скроллинга для десктопа */
+  html, body {
+    overflow: auto !important;
+    height: auto !important;
+  }
+
+  .app {
+    height: auto !important;
+    min-height: 100vh;
+    overflow-y: visible !important;
+    overflow-x: hidden !important;
+    max-width: 100%;
+    padding: 0;
+  }
+
+  /* Карточки должны скроллиться на десктопе */
+  .card {
+    overflow-y: visible !important;
+    height: auto !important;
+    max-height: none !important;
+    min-height: auto;
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  /* Гардероб и магазин - скроллинг работает */
+  .wardrobe-grid {
+    overflow-y: visible !important;
+    max-height: none !important;
+  }
+
+  .wardrobe-list {
+    overflow-y: visible !important;
+    max-height: none !important;
+  }
+
+  /* Чат - адаптация для десктопа */
+  .chat-page {
+    max-width: 800px;
+    margin: 0 auto;
+    height: calc(100vh - 80px);
+    max-height: 900px;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.1);
+    border-radius: 12px;
+    margin-top: 2rem;
+    margin-bottom: 2rem;
+  }
+
+  .chat-header {
+    border-radius: 12px 12px 0 0;
+  }
+
+  .chat-messages {
+    padding: 1.5rem;
+  }
+
+  .chat-message {
+    max-width: 70%;
+  }
+
+  .chat-input-container {
+    border-radius: 0 0 12px 12px;
+    padding: 1.5rem;
+  }
+
+  /* Капсулы - центрирование на десктопе */
+  .capsules-page .card {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+  }
+
+  .capsules-grid {
+    grid-template-columns: repeat(2, 1fr) !important; /* 2 колонки на десктопе */
+    gap: 1.5rem;
+  }
+
+  /* Ограничиваем ширину каждой капсулы для красивого вида */
+  .capsule-card {
+    max-width: 100%;
+    width: 100%;
+  }
+
+  /* Навигация - адаптация для десктопа */
+  .bottom-navigation {
+    max-width: 1200px;
+    margin: 0 auto;
+    left: 50%;
+    transform: translateX(-50%);
+    border-radius: 12px 12px 0 0;
+    box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.1);
+  }
+
+  /* Улучшенная сетка для гардероба на десктопе */
+  .wardrobe-grid {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
+    padding: 1rem;
+  }
+
+  /* Магазин - такая же сетка */
+  .shop-page .wardrobe-grid {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  }
+}
+
+/* Большие экраны (Desktop Large) */
+@media (min-width: 1024px) {
+  .app {
+    padding: 1rem;
+  }
+
+  .card {
+    padding: 2.5rem;
+  }
+
+  .chat-page {
+    max-width: 900px;
+  }
+
+  .wardrobe-grid {
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 1.25rem;
+  }
+
+  .capsules-grid {
+    grid-template-columns: repeat(2, 1fr) !important; /* Всегда 2 колонки */
+    gap: 2rem;
+  }
+}
+
+/* Очень большие экраны (Desktop XL) */
+@media (min-width: 1440px) {
+  .card {
+    max-width: 1400px;
+  }
+
+  .chat-page {
+    max-width: 1000px;
+  }
+
+  .wardrobe-grid {
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .capsules-grid {
+    grid-template-columns: repeat(2, 1fr) !important; /* Всегда 2 колонки */
+    gap: 2.5rem; /* Увеличиваем отступы на больших экранах */
+  }
 }
 
 

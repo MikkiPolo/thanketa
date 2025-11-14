@@ -470,19 +470,76 @@ export default function App() {
 
   const { title, hint, field } = questions[step];
   const progress = ((step + 1) / questions.length) * 100;
+  // Состояние для ввода Telegram ID на десктопе
+  const [inputTelegramId, setInputTelegramId] = useState('');
+
+  const handleTelegramIdSubmit = (e) => {
+    e.preventDefault();
+    if (inputTelegramId.trim()) {
+      const tgId = inputTelegramId.trim();
+      localStorage.setItem('test_telegram_id', tgId);
+      setTgId(tgId);
+      // Перезагружаем профиль
+      window.location.reload();
+    }
+  };
+
   if (!tgId) {
     return (
       <ErrorBoundary>
         <div className={`app ${telegramWebApp.isAvailable ? 'telegram-webapp' : ''}`}>
           <div className="card">
-            <div className="error-content">
-              <h2>Доступ запрещен</h2>
-              <p>Для доступа к приложению необходим Telegram ID</p>
-              <p>Добавьте ?tg_id=714402266 к URL</p>
+            <div className="error-content" style={{ textAlign: 'center', padding: '2rem' }}>
+              <h2>Вход в приложение</h2>
+              <p style={{ marginBottom: '2rem', color: 'var(--color-text-light)' }}>
+                {telegramWebApp.isAvailable 
+                  ? 'Не удалось получить данные из Telegram' 
+                  : 'Для доступа к приложению необходим Telegram ID'}
+              </p>
+              
+              {/* Форма ввода Telegram ID */}
+              <form onSubmit={handleTelegramIdSubmit} style={{ maxWidth: '400px', margin: '0 auto' }}>
+                <div style={{ marginBottom: '1rem' }}>
+                  <input
+                    type="text"
+                    value={inputTelegramId}
+                    onChange={(e) => setInputTelegramId(e.target.value)}
+                    placeholder="Введите ваш Telegram ID"
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem 1rem',
+                      border: '1px solid var(--border-color)',
+                      borderRadius: '8px',
+                      fontSize: '1rem',
+                      backgroundColor: 'var(--input-bg)',
+                      color: 'var(--input-text)',
+                      boxSizing: 'border-box'
+                    }}
+                    autoFocus
+                  />
+                </div>
+                <button
+                  type="submit"
+                  className="btn-primary"
+                  disabled={!inputTelegramId.trim()}
+                  style={{ width: '100%', padding: '0.75rem' }}
+                >
+                  Войти
+                </button>
+              </form>
+
+              <p style={{ marginTop: '1.5rem', fontSize: '0.875rem', color: 'var(--color-text-light)' }}>
+                Или добавьте <code style={{ 
+                  padding: '0.2rem 0.4rem', 
+                  backgroundColor: 'var(--hint-bg)', 
+                  borderRadius: '4px',
+                  fontSize: '0.875rem'
+                }}>?tg_id=ваш_id</code> к URL
+              </p>
               
               {/* Debugger для разработки */}
               {import.meta.env.DEV && (
-                <div style={{ marginTop: '2rem' }}>
+                <div style={{ marginTop: '2rem', paddingTop: '2rem', borderTop: '1px solid var(--border-color)' }}>
                   <button 
                     onClick={() => setShowDebugger(!showDebugger)}
                     style={{ 
@@ -491,14 +548,17 @@ export default function App() {
                       color: 'white', 
                       border: 'none', 
                       borderRadius: '4px',
-                      cursor: 'pointer'
+                      cursor: 'pointer',
+                      fontSize: '0.875rem'
                     }}
                   >
                     {showDebugger ? 'Скрыть' : 'Показать'} Debugger
                   </button>
                   
                   {showDebugger && (
-                    <TelegramIdDebugger onTelegramIdSet={handleTelegramIdSet} />
+                    <div style={{ marginTop: '1rem' }}>
+                      <TelegramIdDebugger onTelegramIdSet={handleTelegramIdSet} />
+                    </div>
                   )}
                 </div>
               )}
