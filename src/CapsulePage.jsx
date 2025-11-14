@@ -82,7 +82,7 @@ const CapsulePage = ({ profile, onBack, initialCapsule = null, isFavoritesView =
     });
 
     if (impressionsSent.size > 0) {
-      console.log(`📊 Отправлено ${impressionsSent.size} impressions для товаров брендов`);
+      // Impressions отправлены
     }
   }, [capsules, profile.telegram_id]); // Запускается при смене капсул
 
@@ -90,7 +90,7 @@ const CapsulePage = ({ profile, onBack, initialCapsule = null, isFavoritesView =
 
   const loadFavorites = async () => {
     try {
-      console.log('🔄 Загружаем избранное для telegram_id:', profile.telegram_id);
+      // Загружаем избранное
       
       if (!profile.telegram_id || profile.telegram_id === 'default') {
         console.log('⚠️ telegram_id отсутствует, пропускаем загрузку избранного');

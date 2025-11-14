@@ -30,9 +30,7 @@ const WardrobePage = ({ telegramId, access, onBack, profile }) => {
     setLoading(true);
     setWardrobe([]);
     try {
-      console.log('Fetching wardrobe from Supabase...');
       const data = await wardrobeService.getWardrobe(telegramId);
-      console.log('Wardrobe response:', data);
       const cleaned = data.filter(item => item && item.id);
       setWardrobe(cleaned);
       setFilteredWardrobe(cleaned);

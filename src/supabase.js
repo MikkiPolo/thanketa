@@ -157,7 +157,6 @@ export const wardrobeService = {
                   throw error
                 }
 
-                console.log('Image uploaded successfully:', data);
                 return data
               } catch (error) {
                 console.error('Error uploading image:', error)
