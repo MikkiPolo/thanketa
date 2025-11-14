@@ -474,7 +474,6 @@ export default function App() {
                 <div className="logo" style={{ marginTop: "2rem", marginBottom: "0.7rem" }}>
                   <img src={theme === 'dark' ? "/vite1.svg" : "/vite.svg"} alt="logo" className="logo-img" />
                 </div>
-                <p className="login-subtitle">Вход в приложение</p>
               </div>
               
               <form onSubmit={handleTelegramIdSubmit} className="login-form">
@@ -507,12 +506,6 @@ export default function App() {
                   Войти
                 </button>
               </form>
-
-              <div className="login-footer">
-                <p className="login-footer-text">
-                  Или добавьте <code>?tg_id=ваш_id</code> к URL
-                </p>
-              </div>
               
               {/* Debugger для разработки */}
               {import.meta.env.DEV && (
