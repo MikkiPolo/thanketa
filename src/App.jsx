@@ -470,8 +470,6 @@ export default function App() {
     fetchProfile();
   };
 
-  const { title, hint, field } = questions[step];
-  const progress = ((step + 1) / questions.length) * 100;
   // Состояние для ввода Telegram ID на десктопе
   const [inputTelegramId, setInputTelegramId] = useState('');
 
@@ -487,7 +485,8 @@ export default function App() {
   };
 
   // Показываем форму входа если нет tgId И загрузка завершена
-  console.log('🔍 Проверка условий:', { tgId, loading, shouldShowLogin: !tgId && !loading });
+  // ВАЖНО: эта проверка должна быть ПЕРВОЙ, до любых обращений к questions или другим данным
+  console.log('🔍 Проверка условий:', { tgId, loading, shouldShowLogin: !tgId && !loading, started, viewing, editing });
   if (!tgId && !loading) {
     console.log('✅ Показываем форму входа');
     return (
@@ -575,6 +574,10 @@ export default function App() {
       </ErrorBoundary>
     );
   }
+
+  // Теперь безопасно можем обращаться к questions, так как проверки на вход и загрузку пройдены
+  const { title, hint, field } = questions[step];
+  const progress = ((step + 1) / questions.length) * 100;
 
   if (viewingCapsules && existingProfile?.telegram_id) {
     return (
