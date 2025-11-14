@@ -487,7 +487,9 @@ export default function App() {
   };
 
   // Показываем форму входа если нет tgId И загрузка завершена
+  console.log('🔍 Проверка условий:', { tgId, loading, shouldShowLogin: !tgId && !loading });
   if (!tgId && !loading) {
+    console.log('✅ Показываем форму входа');
     return (
       <ErrorBoundary>
         <div className={`app ${telegramWebApp.isAvailable ? 'telegram-webapp' : ''}`}>
