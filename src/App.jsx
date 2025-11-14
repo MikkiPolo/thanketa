@@ -298,7 +298,9 @@ export default function App() {
         }
       } else {
         console.log('No tg_id found from any source');
+        // Устанавливаем loading в false, чтобы показать форму входа
         setLoading(false);
+        setTgId(null); // Явно устанавливаем null, чтобы форма входа показалась
       }
     };
 
@@ -484,7 +486,8 @@ export default function App() {
     }
   };
 
-  if (!tgId) {
+  // Показываем форму входа если нет tgId И загрузка завершена
+  if (!tgId && !loading) {
     return (
       <ErrorBoundary>
         <div className={`app ${telegramWebApp.isAvailable ? 'telegram-webapp' : ''}`}>
