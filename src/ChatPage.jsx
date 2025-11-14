@@ -292,7 +292,7 @@ const ChatPage = ({ telegramId }) => {
 
     } catch (error) {
       if (error.name === 'AbortError') {
-        console.log('Request aborted');
+        // Request aborted
         return;
       }
       console.error('Error sending message:', error);
