@@ -238,13 +238,20 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
         console.error('Ошибка настройки IntersectionObserver:', error);
       }
       
-      // Тестовая проверка - вызываем loadMoreItems вручную через 2 секунды для теста
+      // Тестовая проверка - вызываем loadMoreItems вручную через 3 секунды для теста
       setTimeout(() => {
+        console.error('🧪 ТЕСТ: Проверка состояния:', {
+          displayedItems: displayedItems.length,
+          allItems: allItems.length,
+          isLoadingMore: isLoadingMore
+        });
         if (displayedItems.length < allItems.length) {
-          console.error('🧪 ТЕСТ: Принудительный вызов loadMoreItems через 2 секунды');
+          console.error('🧪 ТЕСТ: Принудительный вызов loadMoreItems');
           loadMoreItems();
+        } else {
+          console.error('🧪 ТЕСТ: Все товары уже показаны, подгрузка не нужна');
         }
-      }, 2000);
+      }, 3000);
     };
     setupObserver.retryCount = 0;
 
@@ -440,29 +447,37 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
           ref={observerTargetRef}
           style={{ 
             width: '100%',
-            minHeight: '100px',
-            height: '100px',
+            minHeight: '150px',
+            height: '150px',
             marginTop: '3rem',
             marginBottom: '3rem',
             position: 'relative',
-            backgroundColor: 'transparent',
+            backgroundColor: 'rgba(255, 0, 0, 0.05)', // Красный фон для видимости
             pointerEvents: 'none',
-            border: '1px dashed rgba(0,0,0,0.1)' // Временная визуальная индикация для отладки
+            border: '2px dashed red', // Яркая красная рамка
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000
           }}
           data-observer-target="true"
-          aria-hidden="true"
         >
           {/* Временный маркер для отладки */}
           <div style={{
-            position: 'absolute',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            fontSize: '12px',
-            color: 'rgba(0,0,0,0.3)',
-            whiteSpace: 'nowrap'
+            fontSize: '16px',
+            color: 'red',
+            fontWeight: 'bold',
+            textAlign: 'center',
+            padding: '1rem',
+            backgroundColor: 'white',
+            borderRadius: '8px',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
           }}>
-            Триггер загрузки
+            ТРИГГЕР ЗАГРУЗКИ
+            <br />
+            <span style={{ fontSize: '12px', color: '#666' }}>
+              displayed: {displayedItems.length} / all: {allItems.length}
+            </span>
           </div>
         </div>
       )}
