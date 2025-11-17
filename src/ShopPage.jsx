@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { ShoppingBag } from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { ShoppingBag, Search, X } from 'lucide-react';
 import ShopItemDetail from './ShopItemDetail';
 import LoadingSpinner from './LoadingSpinner';
 
@@ -12,6 +12,7 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [error, setError] = useState(null);
+  const [searchQuery, setSearchQuery] = useState(''); // Поисковый запрос
   const scrollContainerRef = useRef(null);
   const itemsPerPage = 20;
 
@@ -68,6 +69,51 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
     }
     return shuffled;
   }, []);
+
+  // Фильтрация товаров по поисковому запросу
+  const filterItems = useCallback((items, query) => {
+    if (!query || !query.trim()) {
+      return items;
+    }
+    
+    const searchLower = query.toLowerCase().trim();
+    return items.filter(item => {
+      // Ищем в описании товара
+      const description = (item.description || '').toLowerCase();
+      // Также можно искать в категории и названии бренда
+      const category = (item.category || '').toLowerCase();
+      const brandName = (item.brand_name || '').toLowerCase();
+      
+      return description.includes(searchLower) || 
+             category.includes(searchLower) || 
+             brandName.includes(searchLower);
+    });
+  }, []);
+
+  // Фильтрация и отображение товаров при поиске
+  const filterAndDisplayItems = useCallback((items, query) => {
+    const filtered = filterItems(items, query);
+    setDisplayedItems(filtered);
+  }, [filterItems]);
+
+  // Мемоизация отфильтрованных товаров
+  const filteredItems = useMemo(() => {
+    return filterItems(allItems, searchQuery);
+  }, [allItems, searchQuery, filterItems]);
+
+  // Эффект для обновления отображаемых товаров при изменении поиска
+  useEffect(() => {
+    if (searchQuery.trim()) {
+      // Режим поиска - показываем все отфильтрованные товары
+      filterAndDisplayItems(allItems, searchQuery);
+    } else {
+      // Обычный режим - показываем первую порцию
+      if (allItems.length > 0) {
+        const firstBatch = allItems.slice(0, itemsPerPage);
+        setDisplayedItems(firstBatch);
+      }
+    }
+  }, [searchQuery, allItems, filterAndDisplayItems, itemsPerPage]);
 
   // Загрузка следующей порции товаров
   const loadMoreItems = useCallback(() => {
@@ -438,7 +484,8 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
       </div>
       
       {/* Элемент-триггер для Intersection Observer - ВНЕ grid для надежности */}
-      {allItems.length > 0 && (
+      {/* Показываем только если нет активного поиска */}
+      {allItems.length > 0 && !searchQuery.trim() && (
         <div 
           ref={observerTargetRef}
           style={{ 
@@ -450,6 +497,22 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
           }}
           data-observer-target="true"
         />
+      )}
+      
+      {/* Сообщение, если поиск не дал результатов */}
+      {searchQuery.trim() && displayedItems.length === 0 && (
+        <div style={{ 
+          textAlign: 'center', 
+          color: 'var(--color-text-light)', 
+          padding: '3rem 1rem',
+          fontSize: '1rem'
+        }}>
+          По запросу "{searchQuery}" ничего не найдено
+          <br />
+          <span style={{ fontSize: '0.875rem', marginTop: '0.5rem', display: 'block' }}>
+            Попробуйте изменить поисковый запрос
+          </span>
+        </div>
       )}
     </div>
   );
