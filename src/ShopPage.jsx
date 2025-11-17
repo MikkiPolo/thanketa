@@ -40,9 +40,12 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
       const data = await response.json();
       const brandItems = data.items || [];
 
+      console.error('📦 Загружено товаров:', brandItems.length);
       setAllItems(brandItems);
       // Показываем первую порцию товаров
-      setDisplayedItems(brandItems.slice(0, itemsPerPage));
+      const firstBatch = brandItems.slice(0, itemsPerPage);
+      console.error('👁️ Показываем первую порцию:', firstBatch.length, 'товаров');
+      setDisplayedItems(firstBatch);
     } catch (err) {
       console.error('Ошибка загрузки товаров брендов:', err);
       setError('Не удалось загрузить товары. Попробуйте позже.');
@@ -112,34 +115,61 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
 
   // Используем Intersection Observer для отслеживания конца списка
   const observerTargetRef = useRef(null);
+  const observerRef = useRef(null);
 
   // Настройка Intersection Observer для бесконечной прокрутки
   useEffect(() => {
-    if (!observerTargetRef.current || isLoadingMore || allItems.length === 0) return;
+    // Очищаем предыдущий observer
+    if (observerRef.current && observerTargetRef.current) {
+      observerRef.current.unobserve(observerTargetRef.current);
+      observerRef.current.disconnect();
+    }
+
+    if (!observerTargetRef.current || allItems.length === 0) {
+      console.error('⏸️ Observer не настроен:', { 
+        hasTarget: !!observerTargetRef.current, 
+        allItemsLength: allItems.length 
+      });
+      return;
+    }
+
+    console.error('👁️ Настраиваем Intersection Observer:', {
+      displayedItems: displayedItems.length,
+      allItems: allItems.length
+    });
 
     const observer = new IntersectionObserver(
       (entries) => {
         const entry = entries[0];
-        if (entry.isIntersecting) {
+        console.error('👀 Intersection Observer событие:', {
+          isIntersecting: entry.isIntersecting,
+          isLoadingMore,
+          displayedItems: displayedItems.length,
+          allItems: allItems.length
+        });
+        
+        if (entry.isIntersecting && !isLoadingMore) {
           console.error('🔄 Триггер подгрузки: элемент виден, загружаем еще товары');
           loadMoreItems();
         }
       },
       {
         root: null, // viewport
-        rootMargin: '200px', // Начинаем загрузку за 200px до конца
-        threshold: 0.1
+        rootMargin: '300px', // Начинаем загрузку за 300px до конца
+        threshold: 0.01
       }
     );
 
     observer.observe(observerTargetRef.current);
+    observerRef.current = observer;
 
     return () => {
-      if (observerTargetRef.current) {
-        observer.unobserve(observerTargetRef.current);
+      if (observerRef.current && observerTargetRef.current) {
+        observerRef.current.unobserve(observerTargetRef.current);
+        observerRef.current.disconnect();
       }
     };
-  }, [isLoadingMore, allItems.length, displayedItems.length, loadMoreItems]);
+  }, [displayedItems.length, allItems.length, isLoadingMore, loadMoreItems]);
 
   const handleItemClick = (item) => {
     setSelectedItem(item);
@@ -256,16 +286,24 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
           </div>
         )}
         
-        {/* Элемент-триггер для Intersection Observer */}
-        <div 
-          ref={observerTargetRef}
-          style={{ 
-            gridColumn: '1 / -1', 
-            height: '1px', 
-            width: '100%',
-            marginTop: '2rem'
-          }}
-        />
+        {/* Элемент-триггер для Intersection Observer - должен быть видимым */}
+        {displayedItems.length > 0 && (
+          <div 
+            ref={observerTargetRef}
+            style={{ 
+              gridColumn: '1 / -1', 
+              height: '50px', 
+              width: '100%',
+              marginTop: '2rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+          >
+            {/* Невидимый элемент для отслеживания */}
+            <div style={{ height: '1px', width: '1px' }} />
+          </div>
+        )}
         
         {/* Пустые карточки-спейсеры для предотвращения перекрытия навигацией */}
         <div className="wardrobe-spacer"></div>
