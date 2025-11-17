@@ -121,6 +121,7 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
   const observerTargetRef = useRef(null);
   const observerRef = useRef(null);
   const lastLoadTriggerRef = useRef(0);
+  const hasScrolledRef = useRef(false); // Флаг, что пользователь хотя бы раз скроллил
 
   // Функция проверки необходимости подгрузки
   const checkShouldLoadMore = useCallback(() => {
@@ -214,6 +215,12 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
         (entries) => {
           entries.forEach(entry => {
             if (entry.isIntersecting) {
+              // Загружаем только если пользователь уже скроллил
+              // Это предотвращает автоматическую загрузку при первой загрузке страницы
+              if (!hasScrolledRef.current) {
+                return;
+              }
+              
               const now = Date.now();
               // Защита от частых вызовов
               if (now - lastLoadTriggerRef.current > 500) {
@@ -226,7 +233,7 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
         },
         {
           root: scrollRoot, // Используем .app как root, если он скроллится
-          rootMargin: '500px', // Увеличиваем для более раннего срабатывания
+          rootMargin: '300px', // Уменьшаем для более точного срабатывания только при скроллинге
           threshold: 0
         }
       );
@@ -237,26 +244,6 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
       } catch (error) {
         console.error('Ошибка настройки IntersectionObserver:', error);
       }
-      
-      // Тестовая проверка - вызываем loadMoreItems вручную через 3 секунды для теста
-      setTimeout(() => {
-        console.error('🧪 ТЕСТ: Проверка состояния через 3 сек:', {
-          displayedItems: displayedItems.length,
-          allItems: allItems.length,
-          isLoadingMore: isLoadingMore,
-          targetExists: !!observerTargetRef.current,
-          targetVisible: observerTargetRef.current ? observerTargetRef.current.offsetHeight > 0 : false
-        });
-        if (displayedItems.length < allItems.length) {
-          console.error('🧪 ТЕСТ: Принудительный вызов loadMoreItems');
-          loadMoreItems();
-        } else if (allItems.length > 0) {
-          console.error('🧪 ТЕСТ: Все товары показаны, но вызываем loadMoreItems для перемешивания');
-          loadMoreItems(); // Вызываем даже если все показаны - для перемешивания
-        } else {
-          console.error('🧪 ТЕСТ: Нет товаров для загрузки');
-        }
-      }, 3000);
     };
     setupObserver.retryCount = 0;
 
