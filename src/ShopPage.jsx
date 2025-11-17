@@ -1,12 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { ShoppingBag } from 'lucide-react';
 import ShopItemDetail from './ShopItemDetail';
+import LoadingSpinner from './LoadingSpinner';
 
 const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBack }) => {
-  const [items, setItems] = useState([]);
+  const [allItems, setAllItems] = useState([]); // Все загруженные товары
+  const [displayedItems, setDisplayedItems] = useState([]); // Товары для отображения
   const [loading, setLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [error, setError] = useState(null);
+  const scrollContainerRef = useRef(null);
+  const itemsPerPage = 20;
 
   // Загрузка товаров брендов
   useEffect(() => {
@@ -35,7 +40,9 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
       const data = await response.json();
       const brandItems = data.items || [];
 
-      setItems(brandItems);
+      setAllItems(brandItems);
+      // Показываем первую порцию товаров
+      setDisplayedItems(brandItems.slice(0, itemsPerPage));
     } catch (err) {
       console.error('Ошибка загрузки товаров брендов:', err);
       setError('Не удалось загрузить товары. Попробуйте позже.');
@@ -43,6 +50,75 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
       setLoading(false);
     }
   };
+
+  // Перемешивание массива (Fisher-Yates shuffle)
+  const shuffleArray = useCallback((array) => {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  }, []);
+
+  // Загрузка следующей порции товаров
+  const loadMoreItems = useCallback(() => {
+    if (isLoadingMore || allItems.length === 0) return;
+
+    setIsLoadingMore(true);
+
+    // Небольшая задержка для плавности
+    setTimeout(() => {
+      if (displayedItems.length >= allItems.length) {
+        // Все товары показаны - перемешиваем и начинаем заново
+        const shuffled = shuffleArray(allItems);
+        setDisplayedItems([...displayedItems, ...shuffled.slice(0, itemsPerPage)]);
+      } else {
+        // Показываем следующую порцию из перемешанного списка
+        const shuffled = shuffleArray(allItems);
+        // Исключаем уже показанные товары
+        const remainingItems = shuffled.filter(item => 
+          !displayedItems.some(displayed => displayed.id === item.id)
+        );
+        
+        // Если осталось мало товаров, добавляем перемешанные заново
+        const nextBatch = remainingItems.length >= itemsPerPage 
+          ? remainingItems.slice(0, itemsPerPage)
+          : [...remainingItems, ...shuffled.slice(0, itemsPerPage - remainingItems.length)];
+        
+        setDisplayedItems([...displayedItems, ...nextBatch]);
+      }
+      setIsLoadingMore(false);
+    }, 300);
+  }, [allItems, displayedItems, isLoadingMore, shuffleArray]);
+
+  // Обработчик скролла для бесконечной прокрутки
+  const handleScroll = useCallback(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const scrollTop = container.scrollTop;
+    const scrollHeight = container.scrollHeight;
+    const clientHeight = container.clientHeight;
+
+    // Если доскроллили до 80% от конца
+    if (scrollHeight - scrollTop - clientHeight < clientHeight * 0.2) {
+      loadMoreItems();
+    }
+  }, [loadMoreItems]);
+
+  // Добавляем обработчик скролла к контейнеру и window
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    const scrollElement = container || window;
+    
+    if (scrollElement) {
+      scrollElement.addEventListener('scroll', handleScroll, { passive: true });
+      return () => {
+        scrollElement.removeEventListener('scroll', handleScroll);
+      };
+    }
+  }, [handleScroll]);
 
   const handleItemClick = (item) => {
     setSelectedItem(item);
@@ -95,21 +171,21 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
 
   // Иначе показываем список товаров
   return (
-    <div className="card">
+    <div className="card" ref={scrollContainerRef}>
       <div className="wardrobe-header" style={{ marginBottom: '1rem' }}>
         <h2 style={{ fontSize: '1.5rem', fontWeight: '600' }}>Магазин</h2>
       </div>
 
       {/* Сетка товаров (точно как в гардеробе) */}
       <div className="wardrobe-grid">
-        {items.length === 0 ? (
+        {displayedItems.length === 0 ? (
           <div style={{ textAlign: 'center', color: 'var(--input-text)', padding: '1rem' }}>
             Нет товаров для отображения
           </div>
         ) : (
-          items.map((item) => (
+          displayedItems.map((item, index) => (
             <div 
-              key={item.id} 
+              key={`${item.id}-${index}`} 
               className="wardrobe-grid-item"
               onClick={() => handleItemClick(item)}
             >
@@ -136,6 +212,29 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
             </div>
           ))
         )}
+        
+        {/* Индикатор загрузки */}
+        {isLoadingMore && (
+          <div style={{ 
+            gridColumn: '1 / -1', 
+            textAlign: 'center', 
+            padding: '2rem',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '0.5rem'
+          }}>
+            <LoadingSpinner size="small" />
+            <p style={{ 
+              margin: 0, 
+              color: 'var(--color-text-light)', 
+              fontSize: '0.875rem' 
+            }}>
+              Загружаем еще товары...
+            </p>
+          </div>
+        )}
+        
         {/* Пустые карточки-спейсеры для предотвращения перекрытия навигацией */}
         <div className="wardrobe-spacer"></div>
       </div>
