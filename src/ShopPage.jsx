@@ -253,6 +253,9 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
     // Запасной вариант: обработчик скролла
     let scrollTimeout;
     const handleScroll = () => {
+      // Отмечаем, что пользователь скроллит
+      hasScrolledRef.current = true;
+      
       clearTimeout(scrollTimeout);
       scrollTimeout = setTimeout(() => {
         // Определяем, какой элемент скроллится
