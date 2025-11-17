@@ -2874,14 +2874,26 @@ def search_items():
         
         # Для каждого слова создаем варианты поиска (корень слова для учета разных окончаний)
         # Например, "белая" -> ищем "бел" (найдет "белая", "белого", "белый", "белое")
-        def get_word_variants(word):
-            """Возвращает варианты слова для поиска"""
-            variants = [word]  # Точное совпадение
-            # Если слово длиннее 4 символов, берем корень (первые 4-5 символов)
-            if len(word) > 4:
-                root = word[:4] if len(word) <= 6 else word[:5]
-                variants.append(root)
-            return variants
+        def word_matches_in_text(word, text):
+            """Проверяет, есть ли слово или его формы в тексте"""
+            # Точное совпадение слова
+            if word in text:
+                return True
+            
+            # Если слово длиннее 3 символов, ищем слова, начинающиеся с корня
+            if len(word) > 3:
+                # Берем корень (первые 3-4 символа в зависимости от длины)
+                root_length = 3 if len(word) <= 5 else 4
+                root = word[:root_length]
+                
+                # Разбиваем текст на слова и проверяем, начинается ли какое-то слово с корня
+                # Используем регулярное выражение для поиска слов, начинающихся с корня
+                import re
+                pattern = r'\b' + re.escape(root) + r'\w*'
+                if re.search(pattern, text):
+                    return True
+            
+            return False
         
         filtered_items = []
         for item in all_items:
@@ -2892,12 +2904,10 @@ def search_items():
             # Проверяем, содержит ли текст всю фразу целиком
             contains_phrase = query_lower in text_to_search
             
-            # Проверяем, содержит ли текст все слова из запроса (с учетом вариантов)
+            # Проверяем, содержит ли текст все слова из запроса (с учетом разных форм)
             word_matches = []
             for word in query_words_lower:
-                word_variants = get_word_variants(word)
-                # Проверяем, есть ли хотя бы один вариант слова в тексте
-                word_found = any(variant in text_to_search for variant in word_variants)
+                word_found = word_matches_in_text(word, text_to_search)
                 word_matches.append(word_found)
             
             contains_all_words = all(word_matches)
