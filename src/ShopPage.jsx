@@ -240,16 +240,21 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
       
       // Тестовая проверка - вызываем loadMoreItems вручную через 3 секунды для теста
       setTimeout(() => {
-        console.error('🧪 ТЕСТ: Проверка состояния:', {
+        console.error('🧪 ТЕСТ: Проверка состояния через 3 сек:', {
           displayedItems: displayedItems.length,
           allItems: allItems.length,
-          isLoadingMore: isLoadingMore
+          isLoadingMore: isLoadingMore,
+          targetExists: !!observerTargetRef.current,
+          targetVisible: observerTargetRef.current ? observerTargetRef.current.offsetHeight > 0 : false
         });
         if (displayedItems.length < allItems.length) {
           console.error('🧪 ТЕСТ: Принудительный вызов loadMoreItems');
           loadMoreItems();
+        } else if (allItems.length > 0) {
+          console.error('🧪 ТЕСТ: Все товары показаны, но вызываем loadMoreItems для перемешивания');
+          loadMoreItems(); // Вызываем даже если все показаны - для перемешивания
         } else {
-          console.error('🧪 ТЕСТ: Все товары уже показаны, подгрузка не нужна');
+          console.error('🧪 ТЕСТ: Нет товаров для загрузки');
         }
       }, 3000);
     };
@@ -372,6 +377,13 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
   }
 
   // Иначе показываем список товаров
+  console.error('🎨 ShopPage РЕНДЕР:', {
+    allItems: allItems.length,
+    displayedItems: displayedItems.length,
+    loading,
+    error
+  });
+  
   return (
     <div className="card" ref={scrollContainerRef}>
       <div className="wardrobe-header" style={{ marginBottom: '1rem' }}>
@@ -442,42 +454,50 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
       </div>
       
       {/* Элемент-триггер для Intersection Observer - ВНЕ grid для надежности */}
-      {displayedItems.length > 0 && (
+      {/* Рендерим всегда, если есть товары, даже если все уже показаны */}
+      {allItems.length > 0 && (
         <div 
           ref={observerTargetRef}
           style={{ 
             width: '100%',
-            minHeight: '150px',
-            height: '150px',
+            minHeight: '200px',
+            height: '200px',
             marginTop: '3rem',
             marginBottom: '3rem',
             position: 'relative',
-            backgroundColor: 'rgba(255, 0, 0, 0.05)', // Красный фон для видимости
+            backgroundColor: 'rgba(255, 0, 0, 0.15)', // Более яркий красный фон
             pointerEvents: 'none',
-            border: '2px dashed red', // Яркая красная рамка
+            border: '4px solid red', // Толстая красная рамка
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            zIndex: 1000
+            zIndex: 10000, // Максимальный z-index
+            boxSizing: 'border-box'
           }}
           data-observer-target="true"
         >
           {/* Временный маркер для отладки */}
           <div style={{
-            fontSize: '16px',
+            fontSize: '20px',
             color: 'red',
             fontWeight: 'bold',
             textAlign: 'center',
-            padding: '1rem',
+            padding: '1.5rem',
             backgroundColor: 'white',
             borderRadius: '8px',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
+            boxShadow: '0 4px 12px rgba(255,0,0,0.5)',
+            border: '2px solid red'
           }}>
-            ТРИГГЕР ЗАГРУЗКИ
+            🔴 ТРИГГЕР ЗАГРУЗКИ 🔴
             <br />
-            <span style={{ fontSize: '12px', color: '#666' }}>
-              displayed: {displayedItems.length} / all: {allItems.length}
+            <span style={{ fontSize: '14px', color: '#666', display: 'block', marginTop: '0.5rem' }}>
+              Показано: {displayedItems.length} / Всего: {allItems.length}
             </span>
+            {displayedItems.length >= allItems.length && (
+              <span style={{ fontSize: '12px', color: 'orange', display: 'block', marginTop: '0.5rem' }}>
+                Все товары показаны - будет перемешивание
+              </span>
+            )}
           </div>
         </div>
       )}
