@@ -99,15 +99,26 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
         } else {
           // Показываем следующую порцию из перемешанного списка
           const shuffled = shuffleArray(allItems);
-          // Исключаем уже показанные товары
-          const remainingItems = shuffled.filter(item => 
-            !prev.some(displayed => displayed.id === item.id)
-          );
           
-          // Если осталось мало товаров, добавляем перемешанные заново
-          const nextBatch = remainingItems.length >= itemsPerPage 
-            ? remainingItems.slice(0, itemsPerPage)
-            : [...remainingItems, ...shuffled.slice(0, itemsPerPage - remainingItems.length)];
+          // Получаем ID уже показанных товаров
+          const shownIds = new Set(prev.map(item => item.id));
+          
+          // Исключаем уже показанные товары
+          const remainingItems = shuffled.filter(item => !shownIds.has(item.id));
+          
+          // Если осталось мало товаров, перемешиваем все заново и берем любые
+          let nextBatch;
+          if (remainingItems.length >= itemsPerPage) {
+            nextBatch = remainingItems.slice(0, itemsPerPage);
+          } else if (remainingItems.length > 0) {
+            // Добавляем оставшиеся + перемешанные из всех
+            const additionalNeeded = itemsPerPage - remainingItems.length;
+            const additional = shuffleArray(allItems).slice(0, additionalNeeded);
+            nextBatch = [...remainingItems, ...additional];
+          } else {
+            // Все товары уже показаны - перемешиваем заново
+            nextBatch = shuffled.slice(0, itemsPerPage);
+          }
           
           console.error('📦 Добавляем новую порцию:', nextBatch.length, 'товаров');
           const newItems = [...prev, ...nextBatch];
@@ -128,16 +139,29 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
   const checkShouldLoadMore = useCallback(() => {
     if (isLoadingMore || allItems.length === 0) return false;
 
+    // Проверяем все возможные скроллируемые элементы
     const appContainer = document.querySelector('.app');
-    if (!appContainer) return false;
-
-    const scrollTop = appContainer.scrollTop || window.pageYOffset || document.documentElement.scrollTop;
-    const scrollHeight = appContainer.scrollHeight || document.documentElement.scrollHeight;
-    const clientHeight = appContainer.clientHeight || window.innerHeight;
+    const body = document.body;
+    const html = document.documentElement;
+    
+    // Определяем, какой элемент скроллится
+    let scrollTop = 0;
+    let scrollHeight = 0;
+    let clientHeight = 0;
+    
+    if (appContainer && appContainer.scrollHeight > appContainer.clientHeight) {
+      scrollTop = appContainer.scrollTop;
+      scrollHeight = appContainer.scrollHeight;
+      clientHeight = appContainer.clientHeight;
+    } else {
+      scrollTop = window.pageYOffset || html.scrollTop || body.scrollTop || 0;
+      scrollHeight = Math.max(html.scrollHeight, body.scrollHeight, html.offsetHeight, body.offsetHeight);
+      clientHeight = window.innerHeight || html.clientHeight || body.clientHeight;
+    }
 
     // Проверяем, доскроллили ли до 80% от конца
     const distanceToBottom = scrollHeight - scrollTop - clientHeight;
-    const threshold = clientHeight * 0.2; // 20% от высоты экрана
+    const threshold = clientHeight * 0.3; // 30% от высоты экрана
 
     console.error('📏 Проверка скролла:', {
       scrollTop,
@@ -145,23 +169,25 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
       clientHeight,
       distanceToBottom,
       threshold,
-      shouldLoad: distanceToBottom < threshold
+      shouldLoad: distanceToBottom < threshold,
+      displayedItems: displayedItems.length,
+      allItems: allItems.length
     });
 
     return distanceToBottom < threshold;
-  }, [isLoadingMore, allItems.length]);
+  }, [isLoadingMore, allItems.length, displayedItems.length]);
 
   // Настройка Intersection Observer для бесконечной прокрутки
   useEffect(() => {
+    if (allItems.length === 0) {
+      console.error('⏸️ Observer не настроен: нет товаров');
+      return;
+    }
+
     // Очищаем предыдущий observer
     if (observerRef.current) {
       observerRef.current.disconnect();
       observerRef.current = null;
-    }
-
-    if (allItems.length === 0) {
-      console.error('⏸️ Observer не настроен: нет товаров');
-      return;
     }
 
     // Ждем, пока элемент-триггер появится в DOM
@@ -185,7 +211,6 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
           
           // Защита от частых срабатываний (минимум 500ms между вызовами)
           if (now - lastLoadTriggerRef.current < 500) {
-            console.error('⏸️ Слишком часто, пропускаем');
             return;
           }
 
@@ -205,8 +230,8 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
         },
         {
           root: null, // viewport
-          rootMargin: '400px', // Начинаем загрузку за 400px до конца
-          threshold: [0, 0.1, 0.5, 1.0] // Несколько порогов для надежности
+          rootMargin: '500px', // Начинаем загрузку за 500px до конца
+          threshold: 0.01 // Минимальный порог
         }
       );
 
@@ -215,7 +240,8 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
       console.error('✅ Observer настроен и наблюдает за элементом');
     };
 
-    setupObserver();
+    // Задержка для гарантии, что DOM обновлен
+    setTimeout(setupObserver, 100);
 
     // Запасной вариант: обработчик скролла
     const handleScroll = () => {
@@ -229,8 +255,11 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
       }
     };
 
-    const appContainer = document.querySelector('.app');
+    // Добавляем обработчики на все возможные скроллируемые элементы
     window.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('wheel', handleScroll, { passive: true });
+    
+    const appContainer = document.querySelector('.app');
     if (appContainer) {
       appContainer.addEventListener('scroll', handleScroll, { passive: true });
     }
@@ -241,11 +270,12 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
         observerRef.current = null;
       }
       window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('wheel', handleScroll);
       if (appContainer) {
         appContainer.removeEventListener('scroll', handleScroll);
       }
     };
-  }, [displayedItems.length, allItems.length, isLoadingMore, loadMoreItems, checkShouldLoadMore]);
+  }, [displayedItems.length, allItems.length, checkShouldLoadMore, loadMoreItems]);
 
   const handleItemClick = (item) => {
     setSelectedItem(item);
@@ -340,6 +370,19 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
           ))
         )}
         
+        {/* Элемент-триггер для Intersection Observer - должен быть сразу после товаров */}
+        <div 
+          ref={observerTargetRef}
+          style={{ 
+            gridColumn: '1 / -1', 
+            height: '50px', 
+            width: '100%',
+            marginTop: '1rem',
+            position: 'relative'
+          }}
+          data-observer-target="true"
+        />
+        
         {/* Индикатор загрузки */}
         {isLoadingMore && (
           <div style={{ 
@@ -361,28 +404,6 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
             </p>
           </div>
         )}
-        
-        {/* Элемент-триггер для Intersection Observer - всегда должен быть в конце */}
-        <div 
-          ref={observerTargetRef}
-          style={{ 
-            gridColumn: '1 / -1', 
-            height: '100px', 
-            width: '100%',
-            marginTop: '2rem',
-            position: 'relative'
-          }}
-          data-observer-target="true"
-        >
-          {/* Видимый маркер для отладки (можно убрать потом) */}
-          <div style={{ 
-            height: '2px', 
-            width: '100%',
-            background: 'transparent',
-            position: 'absolute',
-            top: '50%'
-          }} />
-        </div>
         
         {/* Пустые карточки-спейсеры для предотвращения перекрытия навигацией */}
         <div className="wardrobe-spacer"></div>
