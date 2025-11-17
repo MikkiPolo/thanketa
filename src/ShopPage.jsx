@@ -48,10 +48,15 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
       console.error('📦 ShopPage: Первые 3 товара:', brandItems.slice(0, 3).map(i => ({ id: i.id, description: i.description?.substring(0, 30) })));
       
       setAllItems(brandItems);
-      // Показываем первую порцию товаров
-      const firstBatch = brandItems.slice(0, itemsPerPage);
-      console.error('👁️ ShopPage: Показываем первую порцию:', firstBatch.length, 'товаров из', brandItems.length);
-      setDisplayedItems(firstBatch);
+      // Показываем первую порцию товаров (если нет поиска)
+      if (!searchQuery.trim()) {
+        const firstBatch = brandItems.slice(0, itemsPerPage);
+        console.error('👁️ ShopPage: Показываем первую порцию:', firstBatch.length, 'товаров из', brandItems.length);
+        setDisplayedItems(firstBatch);
+      } else {
+        // Если есть поиск, фильтруем товары
+        filterAndDisplayItems(brandItems, searchQuery);
+      }
     } catch (err) {
       console.error('Ошибка загрузки товаров брендов:', err);
       setError('Не удалось загрузить товары. Попробуйте позже.');
