@@ -2850,30 +2850,37 @@ def search_items():
         if not query:
             return jsonify({'error': 'Поисковый запрос не может быть пустым'}), 400
         
-        # Разбиваем запрос на слова для более гибкого поиска
-        # Например, "белая рубашка" -> ищем товары, содержащие "белая" И "рубашка"
+        # Разбиваем запрос на слова
         query_words = [w.strip() for w in query.split() if w.strip()]
-        
         if not query_words:
             return jsonify({'error': 'Поисковый запрос не может быть пустым'}), 400
         
-        # Получаем все активные товары
-        base_query = supabase.table('brand_items') \
-            .select('id, brand_id, category, season, description, image_id, shop_link, price, currency') \
-            .eq('is_approved', True) \
-            .eq('is_active', True)
-        
-        # Фильтруем в Python, так как Supabase не поддерживает сложные AND/OR комбинации для ilike
-        response = base_query.limit(10000).execute()  # Получаем больше товаров для фильтрации
-        all_items = response.data if response.data else []
-        
-        # Фильтруем товары: ищем товары, где description или category содержат слова из запроса
-        # Используем более гибкий поиск - ищем частичные совпадения для учета разных форм слов
         query_lower = query.lower()
         query_words_lower = [w.lower() for w in query_words]
         
-        # Для каждого слова создаем варианты поиска (корень слова для учета разных окончаний)
-        # Например, "белая" -> ищем "бел" (найдет "белая", "белого", "белый", "белое")
+        # Используем Supabase для быстрого поиска по описанию
+        # Ищем товары, где description содержит хотя бы одно слово из запроса
+        # Это быстрее, чем загружать все товары
+        search_patterns = [f'%{word}%' for word in query_words_lower]
+        
+        # Строим OR условие для Supabase: description содержит любое из слов
+        # Формат: 'description.ilike.%word1%,description.ilike.%word2%'
+        or_conditions = ','.join([f'description.ilike.{pattern}' for pattern in search_patterns])
+        
+        response = supabase.table('brand_items') \
+            .select('id, brand_id, category, season, description, image_id, shop_link, price, currency') \
+            .eq('is_approved', True) \
+            .eq('is_active', True) \
+            .or_(or_conditions) \
+            .limit(1000) \
+            .execute()
+        
+        all_items = response.data if response.data else []
+        
+        # Теперь фильтруем в Python для более точного поиска
+        # Ищем товары, где description содержит ВСЕ слова из запроса (с учетом разных форм)
+        import re
+        
         def word_matches_in_text(word, text):
             """Проверяет, есть ли слово или его формы в тексте"""
             # Точное совпадение слова
@@ -2882,39 +2889,40 @@ def search_items():
             
             # Если слово длиннее 3 символов, ищем слова, начинающиеся с корня
             if len(word) > 3:
-                # Берем корень (первые 3-4 символа в зависимости от длины)
                 root_length = 3 if len(word) <= 5 else 4
                 root = word[:root_length]
-                
-                # Разбиваем текст на слова и проверяем, начинается ли какое-то слово с корня
-                # Используем регулярное выражение для поиска слов, начинающихся с корня
-                import re
                 pattern = r'\b' + re.escape(root) + r'\w*'
                 if re.search(pattern, text):
                     return True
             
             return False
         
+        # Фильтруем: товар должен содержать ВСЕ слова из запроса
         filtered_items = []
         for item in all_items:
             description = (item.get('description') or '').lower()
             category = (item.get('category') or '').lower()
             text_to_search = f'{description} {category}'
             
-            # Проверяем, содержит ли текст всю фразу целиком
-            contains_phrase = query_lower in text_to_search
+            # Проверяем, содержит ли текст всю фразу целиком (высший приоритет)
+            if query_lower in text_to_search:
+                filtered_items.append(item)
+                continue
             
-            # Проверяем, содержит ли текст все слова из запроса (с учетом разных форм)
-            word_matches = []
-            for word in query_words_lower:
-                word_found = word_matches_in_text(word, text_to_search)
-                word_matches.append(word_found)
-            
-            contains_all_words = all(word_matches)
-            
-            if contains_phrase or contains_all_words:
+            # Проверяем, содержит ли текст все слова из запроса
+            word_matches = [word_matches_in_text(word, text_to_search) for word in query_words_lower]
+            if all(word_matches):
                 filtered_items.append(item)
         
+        # Сортируем результаты: сначала те, где есть точная фраза, потом остальные
+        def sort_key(item):
+            description = (item.get('description') or '').lower()
+            category = (item.get('category') or '').lower()
+            text = f'{description} {category}'
+            # 0 - если содержит точную фразу, 1 - если только слова
+            return 0 if query_lower in text else 1
+        
+        filtered_items.sort(key=sort_key)
         items = filtered_items[:500]  # Ограничиваем 500 результатами
         
         # Формируем image_url и добавляем brand_name
