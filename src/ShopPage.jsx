@@ -377,13 +377,6 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
   }
 
   // Иначе показываем список товаров
-  console.error('🎨 ShopPage РЕНДЕР:', {
-    allItems: allItems.length,
-    displayedItems: displayedItems.length,
-    loading,
-    error,
-    willRenderTrigger: true // Теперь всегда рендерим
-  });
   
   return (
     <div className="card" ref={scrollContainerRef} style={{ position: 'relative' }}>
@@ -455,58 +448,19 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
       </div>
       
       {/* Элемент-триггер для Intersection Observer - ВНЕ grid для надежности */}
-      {/* ВРЕМЕННО: Рендерим ВСЕГДА для отладки, даже если нет товаров */}
-      <div 
-        ref={observerTargetRef}
-        style={{ 
-          width: '100%',
-          minHeight: '200px',
-          height: '200px',
-          marginTop: '3rem',
-          marginBottom: '3rem',
-          position: 'relative',
-          backgroundColor: 'rgba(255, 0, 0, 0.3)', // Очень яркий красный фон
-          pointerEvents: 'none',
-          border: '6px solid red', // Очень толстая красная рамка
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 10000, // Максимальный z-index
-          boxSizing: 'border-box',
-          flexShrink: 0 // Предотвращаем сжатие
-        }}
-        data-observer-target="true"
-      >
-        {/* Временный маркер для отладки */}
-        <div style={{
-          fontSize: '24px',
-          color: 'red',
-          fontWeight: 'bold',
-          textAlign: 'center',
-          padding: '2rem',
-          backgroundColor: 'white',
-          borderRadius: '8px',
-          boxShadow: '0 4px 12px rgba(255,0,0,0.5)',
-          border: '3px solid red',
-          minWidth: '300px'
-        }}>
-          🔴 ТРИГГЕР ЗАГРУЗКИ 🔴
-          <br />
-          <span style={{ fontSize: '16px', color: '#666', display: 'block', marginTop: '0.5rem' }}>
-            Показано: {displayedItems.length} / Всего: {allItems.length}
-          </span>
-          {allItems.length === 0 && (
-            <span style={{ fontSize: '14px', color: 'red', display: 'block', marginTop: '0.5rem', fontWeight: 'bold' }}>
-              ⚠️ ТОВАРЫ НЕ ЗАГРУЖЕНЫ!
-            </span>
-          )}
-          {displayedItems.length >= allItems.length && allItems.length > 0 && (
-            <span style={{ fontSize: '14px', color: 'orange', display: 'block', marginTop: '0.5rem' }}>
-              Все товары показаны - будет перемешивание
-            </span>
-          )}
-        </div>
-      </div>
+      {allItems.length > 0 && (
+        <div 
+          ref={observerTargetRef}
+          style={{ 
+            width: '100%',
+            height: '1px',
+            marginTop: '2rem',
+            marginBottom: '2rem',
+            pointerEvents: 'none'
+          }}
+          data-observer-target="true"
+        />
+      )}
     </div>
   );
 };
