@@ -189,8 +189,12 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
       
       const target = observerTargetRef.current;
       if (!target) {
-        // Повторяем попытку
-        setTimeout(setupObserver, 200);
+        // Повторяем попытку максимум 10 раз
+        const retryCount = setupObserver.retryCount || 0;
+        if (retryCount < 10) {
+          setupObserver.retryCount = retryCount + 1;
+          setTimeout(setupObserver, 200);
+        }
         return;
       }
 
@@ -202,17 +206,20 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
             if (entry.isIntersecting) {
               const now = Date.now();
               // Защита от частых вызовов
-              if (now - lastLoadTriggerRef.current > 1000 && !isLoadingMore) {
+              if (now - lastLoadTriggerRef.current > 800 && !isLoadingMore) {
                 lastLoadTriggerRef.current = now;
-                loadMoreItems();
+                // Проверяем, есть ли еще товары для загрузки
+                if (displayedItems.length < allItems.length || allItems.length >= itemsPerPage * 2) {
+                  loadMoreItems();
+                }
               }
             }
           });
         },
         {
           root: null, // viewport
-          rootMargin: '0px', // Без отступа - срабатывает когда элемент появляется
-          threshold: 0.1 // Срабатывает когда 10% элемента видно
+          rootMargin: '200px', // Загружаем за 200px до появления элемента
+          threshold: 0 // Срабатывает как только элемент появляется
         }
       );
 
@@ -223,6 +230,7 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
         console.error('Ошибка настройки IntersectionObserver:', error);
       }
     };
+    setupObserver.retryCount = 0;
 
     // Настраиваем observer после рендера
     const timeoutId = setTimeout(setupObserver, 500);
@@ -399,7 +407,7 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
       </div>
       
       {/* Элемент-триггер для Intersection Observer - ВНЕ grid для надежности */}
-      {displayedItems.length > 0 && displayedItems.length < allItems.length && (
+      {displayedItems.length > 0 && (
         <div 
           ref={observerTargetRef}
           style={{ 
