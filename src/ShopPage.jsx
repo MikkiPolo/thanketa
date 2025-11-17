@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { ShoppingBag, Search, X } from 'lucide-react';
 import ShopItemDetail from './ShopItemDetail';
 import LoadingSpinner from './LoadingSpinner';
