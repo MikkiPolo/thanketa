@@ -53,10 +53,8 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
         const firstBatch = brandItems.slice(0, itemsPerPage);
         console.error('👁️ ShopPage: Показываем первую порцию:', firstBatch.length, 'товаров из', brandItems.length);
         setDisplayedItems(firstBatch);
-      } else {
-        // Если есть поиск, фильтруем товары
-        filterAndDisplayItems(brandItems, searchQuery);
       }
+      // Если есть поиск, он обработается через useEffect
     } catch (err) {
       console.error('Ошибка загрузки товаров брендов:', err);
       setError('Не удалось загрузить товары. Попробуйте позже.');
