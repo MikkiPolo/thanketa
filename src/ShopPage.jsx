@@ -66,107 +66,135 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
 
   // Загрузка следующей порции товаров
   const loadMoreItems = useCallback(() => {
-    if (isLoadingMore || allItems.length === 0) {
-      console.error('⏸️ Подгрузка пропущена:', { isLoadingMore, allItemsLength: allItems.length });
+    if (isLoadingMore) {
+      console.error('⏸️ Подгрузка пропущена: уже идет загрузка');
+      return;
+    }
+    
+    if (allItems.length === 0) {
+      console.error('⏸️ Подгрузка пропущена: нет товаров');
       return;
     }
 
-    console.error('🚀 Начинаем подгрузку товаров:', { 
-      displayed: displayedItems.length, 
-      all: allItems.length 
-    });
+    console.error('🚀 Начинаем подгрузку товаров');
 
     setIsLoadingMore(true);
 
     // Небольшая задержка для плавности
     setTimeout(() => {
-      if (displayedItems.length >= allItems.length) {
-        // Все товары показаны - перемешиваем и начинаем заново
-        console.error('🔄 Все товары показаны, перемешиваем заново');
-        const shuffled = shuffleArray(allItems);
-        setDisplayedItems(prev => {
-          const newItems = [...prev, ...shuffled.slice(0, itemsPerPage)];
-          console.error('✅ Добавлено товаров:', newItems.length - prev.length);
-          return newItems;
+      setDisplayedItems(prev => {
+        console.error('📊 Текущее состояние:', {
+          displayed: prev.length,
+          all: allItems.length
         });
-      } else {
-        // Показываем следующую порцию из перемешанного списка
-        const shuffled = shuffleArray(allItems);
-        // Исключаем уже показанные товары
-        const remainingItems = shuffled.filter(item => 
-          !displayedItems.some(displayed => displayed.id === item.id)
-        );
-        
-        // Если осталось мало товаров, добавляем перемешанные заново
-        const nextBatch = remainingItems.length >= itemsPerPage 
-          ? remainingItems.slice(0, itemsPerPage)
-          : [...remainingItems, ...shuffled.slice(0, itemsPerPage - remainingItems.length)];
-        
-        console.error('📦 Добавляем новую порцию:', nextBatch.length, 'товаров');
-        setDisplayedItems(prev => {
+
+        if (prev.length >= allItems.length) {
+          // Все товары показаны - перемешиваем и начинаем заново
+          console.error('🔄 Все товары показаны, перемешиваем заново');
+          const shuffled = shuffleArray(allItems);
+          const newItems = [...prev, ...shuffled.slice(0, itemsPerPage)];
+          console.error('✅ Добавлено товаров:', newItems.length - prev.length, 'Всего:', newItems.length);
+          setIsLoadingMore(false);
+          return newItems;
+        } else {
+          // Показываем следующую порцию из перемешанного списка
+          const shuffled = shuffleArray(allItems);
+          // Исключаем уже показанные товары
+          const remainingItems = shuffled.filter(item => 
+            !prev.some(displayed => displayed.id === item.id)
+          );
+          
+          // Если осталось мало товаров, добавляем перемешанные заново
+          const nextBatch = remainingItems.length >= itemsPerPage 
+            ? remainingItems.slice(0, itemsPerPage)
+            : [...remainingItems, ...shuffled.slice(0, itemsPerPage - remainingItems.length)];
+          
+          console.error('📦 Добавляем новую порцию:', nextBatch.length, 'товаров');
           const newItems = [...prev, ...nextBatch];
           console.error('✅ Всего товаров теперь:', newItems.length);
+          setIsLoadingMore(false);
           return newItems;
-        });
-      }
-      setIsLoadingMore(false);
+        }
+      });
     }, 300);
-  }, [allItems, displayedItems, isLoadingMore, shuffleArray]);
+  }, [allItems, isLoadingMore, shuffleArray, itemsPerPage]);
 
   // Используем Intersection Observer для отслеживания конца списка
   const observerTargetRef = useRef(null);
   const observerRef = useRef(null);
+  const lastLoadTriggerRef = useRef(0);
 
   // Настройка Intersection Observer для бесконечной прокрутки
   useEffect(() => {
     // Очищаем предыдущий observer
-    if (observerRef.current && observerTargetRef.current) {
-      observerRef.current.unobserve(observerTargetRef.current);
+    if (observerRef.current) {
       observerRef.current.disconnect();
+      observerRef.current = null;
     }
 
-    if (!observerTargetRef.current || allItems.length === 0) {
-      console.error('⏸️ Observer не настроен:', { 
-        hasTarget: !!observerTargetRef.current, 
-        allItemsLength: allItems.length 
-      });
+    if (allItems.length === 0) {
+      console.error('⏸️ Observer не настроен: нет товаров');
       return;
     }
 
-    console.error('👁️ Настраиваем Intersection Observer:', {
-      displayedItems: displayedItems.length,
-      allItems: allItems.length
-    });
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const entry = entries[0];
-        console.error('👀 Intersection Observer событие:', {
-          isIntersecting: entry.isIntersecting,
-          isLoadingMore,
-          displayedItems: displayedItems.length,
-          allItems: allItems.length
-        });
-        
-        if (entry.isIntersecting && !isLoadingMore) {
-          console.error('🔄 Триггер подгрузки: элемент виден, загружаем еще товары');
-          loadMoreItems();
-        }
-      },
-      {
-        root: null, // viewport
-        rootMargin: '300px', // Начинаем загрузку за 300px до конца
-        threshold: 0.01
+    // Ждем, пока элемент-триггер появится в DOM
+    const setupObserver = () => {
+      if (!observerTargetRef.current) {
+        console.error('⏸️ Элемент-триггер еще не в DOM, повторяем через 100ms');
+        setTimeout(setupObserver, 100);
+        return;
       }
-    );
 
-    observer.observe(observerTargetRef.current);
-    observerRef.current = observer;
+      console.error('👁️ Настраиваем Intersection Observer:', {
+        displayedItems: displayedItems.length,
+        allItems: allItems.length,
+        hasTarget: !!observerTargetRef.current
+      });
+
+      const observer = new IntersectionObserver(
+        (entries) => {
+          const entry = entries[0];
+          const now = Date.now();
+          
+          // Защита от частых срабатываний (минимум 500ms между вызовами)
+          if (now - lastLoadTriggerRef.current < 500) {
+            console.error('⏸️ Слишком часто, пропускаем');
+            return;
+          }
+
+          console.error('👀 Intersection Observer событие:', {
+            isIntersecting: entry.isIntersecting,
+            isLoadingMore,
+            displayedItems: displayedItems.length,
+            allItems: allItems.length,
+            intersectionRatio: entry.intersectionRatio,
+            boundingClientRect: entry.boundingClientRect
+          });
+          
+          if (entry.isIntersecting && !isLoadingMore) {
+            lastLoadTriggerRef.current = now;
+            console.error('🔄 Триггер подгрузки: элемент виден, загружаем еще товары');
+            loadMoreItems();
+          }
+        },
+        {
+          root: null, // viewport
+          rootMargin: '400px', // Начинаем загрузку за 400px до конца
+          threshold: [0, 0.1, 0.5, 1.0] // Несколько порогов для надежности
+        }
+      );
+
+      observer.observe(observerTargetRef.current);
+      observerRef.current = observer;
+      console.error('✅ Observer настроен и наблюдает за элементом');
+    };
+
+    setupObserver();
 
     return () => {
-      if (observerRef.current && observerTargetRef.current) {
-        observerRef.current.unobserve(observerTargetRef.current);
+      if (observerRef.current) {
         observerRef.current.disconnect();
+        observerRef.current = null;
       }
     };
   }, [displayedItems.length, allItems.length, isLoadingMore, loadMoreItems]);
@@ -286,24 +314,27 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
           </div>
         )}
         
-        {/* Элемент-триггер для Intersection Observer - должен быть видимым */}
-        {displayedItems.length > 0 && (
-          <div 
-            ref={observerTargetRef}
-            style={{ 
-              gridColumn: '1 / -1', 
-              height: '50px', 
-              width: '100%',
-              marginTop: '2rem',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}
-          >
-            {/* Невидимый элемент для отслеживания */}
-            <div style={{ height: '1px', width: '1px' }} />
-          </div>
-        )}
+        {/* Элемент-триггер для Intersection Observer - всегда должен быть в конце */}
+        <div 
+          ref={observerTargetRef}
+          style={{ 
+            gridColumn: '1 / -1', 
+            height: '100px', 
+            width: '100%',
+            marginTop: '2rem',
+            position: 'relative'
+          }}
+          data-observer-target="true"
+        >
+          {/* Видимый маркер для отладки (можно убрать потом) */}
+          <div style={{ 
+            height: '2px', 
+            width: '100%',
+            background: 'transparent',
+            position: 'absolute',
+            top: '50%'
+          }} />
+        </div>
         
         {/* Пустые карточки-спейсеры для предотвращения перекрытия навигацией */}
         <div className="wardrobe-spacer"></div>
