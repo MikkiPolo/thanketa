@@ -94,12 +94,13 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
 
   // Обработчик скролла для бесконечной прокрутки
   const handleScroll = useCallback(() => {
-    const container = scrollContainerRef.current;
-    if (!container) return;
+    // Ищем элемент с классом .app, который является скроллируемым контейнером
+    const appContainer = document.querySelector('.app');
+    if (!appContainer) return;
 
-    const scrollTop = container.scrollTop;
-    const scrollHeight = container.scrollHeight;
-    const clientHeight = container.clientHeight;
+    const scrollTop = appContainer.scrollTop || window.pageYOffset || document.documentElement.scrollTop;
+    const scrollHeight = appContainer.scrollHeight || document.documentElement.scrollHeight;
+    const clientHeight = appContainer.clientHeight || window.innerHeight;
 
     // Если доскроллили до 80% от конца
     if (scrollHeight - scrollTop - clientHeight < clientHeight * 0.2) {
@@ -107,17 +108,26 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
     }
   }, [loadMoreItems]);
 
-  // Добавляем обработчик скролла к контейнеру и window
+  // Добавляем обработчик скролла к window и .app контейнеру
   useEffect(() => {
-    const container = scrollContainerRef.current;
-    const scrollElement = container || window;
+    const appContainer = document.querySelector('.app');
     
-    if (scrollElement) {
-      scrollElement.addEventListener('scroll', handleScroll, { passive: true });
-      return () => {
-        scrollElement.removeEventListener('scroll', handleScroll);
-      };
+    const handleScrollEvent = () => {
+      handleScroll();
+    };
+    
+    // Добавляем обработчик на window (для мобильных) и на .app (для десктопа)
+    window.addEventListener('scroll', handleScrollEvent, { passive: true });
+    if (appContainer) {
+      appContainer.addEventListener('scroll', handleScrollEvent, { passive: true });
     }
+    
+    return () => {
+      window.removeEventListener('scroll', handleScrollEvent);
+      if (appContainer) {
+        appContainer.removeEventListener('scroll', handleScrollEvent);
+      }
+    };
   }, [handleScroll]);
 
   const handleItemClick = (item) => {
