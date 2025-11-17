@@ -63,7 +63,15 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
 
   // Загрузка следующей порции товаров
   const loadMoreItems = useCallback(() => {
-    if (isLoadingMore || allItems.length === 0) return;
+    if (isLoadingMore || allItems.length === 0) {
+      console.error('⏸️ Подгрузка пропущена:', { isLoadingMore, allItemsLength: allItems.length });
+      return;
+    }
+
+    console.error('🚀 Начинаем подгрузку товаров:', { 
+      displayed: displayedItems.length, 
+      all: allItems.length 
+    });
 
     setIsLoadingMore(true);
 
@@ -71,8 +79,13 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
     setTimeout(() => {
       if (displayedItems.length >= allItems.length) {
         // Все товары показаны - перемешиваем и начинаем заново
+        console.error('🔄 Все товары показаны, перемешиваем заново');
         const shuffled = shuffleArray(allItems);
-        setDisplayedItems([...displayedItems, ...shuffled.slice(0, itemsPerPage)]);
+        setDisplayedItems(prev => {
+          const newItems = [...prev, ...shuffled.slice(0, itemsPerPage)];
+          console.error('✅ Добавлено товаров:', newItems.length - prev.length);
+          return newItems;
+        });
       } else {
         // Показываем следующую порцию из перемешанного списка
         const shuffled = shuffleArray(allItems);
@@ -86,49 +99,47 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
           ? remainingItems.slice(0, itemsPerPage)
           : [...remainingItems, ...shuffled.slice(0, itemsPerPage - remainingItems.length)];
         
-        setDisplayedItems([...displayedItems, ...nextBatch]);
+        console.error('📦 Добавляем новую порцию:', nextBatch.length, 'товаров');
+        setDisplayedItems(prev => {
+          const newItems = [...prev, ...nextBatch];
+          console.error('✅ Всего товаров теперь:', newItems.length);
+          return newItems;
+        });
       }
       setIsLoadingMore(false);
     }, 300);
   }, [allItems, displayedItems, isLoadingMore, shuffleArray]);
 
-  // Обработчик скролла для бесконечной прокрутки
-  const handleScroll = useCallback(() => {
-    // Ищем элемент с классом .app, который является скроллируемым контейнером
-    const appContainer = document.querySelector('.app');
-    if (!appContainer) return;
+  // Используем Intersection Observer для отслеживания конца списка
+  const observerTargetRef = useRef(null);
 
-    const scrollTop = appContainer.scrollTop || window.pageYOffset || document.documentElement.scrollTop;
-    const scrollHeight = appContainer.scrollHeight || document.documentElement.scrollHeight;
-    const clientHeight = appContainer.clientHeight || window.innerHeight;
-
-    // Если доскроллили до 80% от конца
-    if (scrollHeight - scrollTop - clientHeight < clientHeight * 0.2) {
-      loadMoreItems();
-    }
-  }, [loadMoreItems]);
-
-  // Добавляем обработчик скролла к window и .app контейнеру
+  // Настройка Intersection Observer для бесконечной прокрутки
   useEffect(() => {
-    const appContainer = document.querySelector('.app');
-    
-    const handleScrollEvent = () => {
-      handleScroll();
-    };
-    
-    // Добавляем обработчик на window (для мобильных) и на .app (для десктопа)
-    window.addEventListener('scroll', handleScrollEvent, { passive: true });
-    if (appContainer) {
-      appContainer.addEventListener('scroll', handleScrollEvent, { passive: true });
-    }
-    
+    if (!observerTargetRef.current || isLoadingMore || allItems.length === 0) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (entry.isIntersecting) {
+          console.error('🔄 Триггер подгрузки: элемент виден, загружаем еще товары');
+          loadMoreItems();
+        }
+      },
+      {
+        root: null, // viewport
+        rootMargin: '200px', // Начинаем загрузку за 200px до конца
+        threshold: 0.1
+      }
+    );
+
+    observer.observe(observerTargetRef.current);
+
     return () => {
-      window.removeEventListener('scroll', handleScrollEvent);
-      if (appContainer) {
-        appContainer.removeEventListener('scroll', handleScrollEvent);
+      if (observerTargetRef.current) {
+        observer.unobserve(observerTargetRef.current);
       }
     };
-  }, [handleScroll]);
+  }, [isLoadingMore, allItems.length, displayedItems.length, loadMoreItems]);
 
   const handleItemClick = (item) => {
     setSelectedItem(item);
@@ -244,6 +255,17 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
             </p>
           </div>
         )}
+        
+        {/* Элемент-триггер для Intersection Observer */}
+        <div 
+          ref={observerTargetRef}
+          style={{ 
+            gridColumn: '1 / -1', 
+            height: '1px', 
+            width: '100%',
+            marginTop: '2rem'
+          }}
+        />
         
         {/* Пустые карточки-спейсеры для предотвращения перекрытия навигацией */}
         <div className="wardrobe-spacer"></div>
