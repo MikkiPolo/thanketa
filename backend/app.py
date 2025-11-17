@@ -2852,11 +2852,15 @@ def search_items():
         
         # Поиск по всей БД используя ilike для нечувствительного к регистру поиска
         # Ищем в description, category
+        # Формат для OR: 'column1.ilike.value,column2.ilike.value'
+        search_pattern = f'%{query}%'
+        or_condition = f'description.ilike.{search_pattern},category.ilike.{search_pattern}'
+        
         response = supabase.table('brand_items') \
             .select('id, brand_id, category, season, description, image_id, shop_link, price, currency') \
             .eq('is_approved', True) \
             .eq('is_active', True) \
-            .or_(f'description.ilike.%{query}%,category.ilike.%{query}%') \
+            .or_(or_condition) \
             .limit(500) \
             .execute()
         
