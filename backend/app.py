@@ -2867,9 +2867,21 @@ def search_items():
         response = base_query.limit(10000).execute()  # Получаем больше товаров для фильтрации
         all_items = response.data if response.data else []
         
-        # Фильтруем товары: ищем товары, где description или category содержат ВСЕ слова из запроса
+        # Фильтруем товары: ищем товары, где description или category содержат слова из запроса
+        # Используем более гибкий поиск - ищем частичные совпадения для учета разных форм слов
         query_lower = query.lower()
         query_words_lower = [w.lower() for w in query_words]
+        
+        # Для каждого слова создаем варианты поиска (корень слова для учета разных окончаний)
+        # Например, "белая" -> ищем "бел" (найдет "белая", "белого", "белый", "белое")
+        def get_word_variants(word):
+            """Возвращает варианты слова для поиска"""
+            variants = [word]  # Точное совпадение
+            # Если слово длиннее 4 символов, берем корень (первые 4-5 символов)
+            if len(word) > 4:
+                root = word[:4] if len(word) <= 6 else word[:5]
+                variants.append(root)
+            return variants
         
         filtered_items = []
         for item in all_items:
@@ -2877,10 +2889,18 @@ def search_items():
             category = (item.get('category') or '').lower()
             text_to_search = f'{description} {category}'
             
-            # Проверяем, содержит ли текст все слова из запроса
-            # Или содержит всю фразу целиком
-            contains_all_words = all(word in text_to_search for word in query_words_lower)
+            # Проверяем, содержит ли текст всю фразу целиком
             contains_phrase = query_lower in text_to_search
+            
+            # Проверяем, содержит ли текст все слова из запроса (с учетом вариантов)
+            word_matches = []
+            for word in query_words_lower:
+                word_variants = get_word_variants(word)
+                # Проверяем, есть ли хотя бы один вариант слова в тексте
+                word_found = any(variant in text_to_search for variant in word_variants)
+                word_matches.append(word_found)
+            
+            contains_all_words = all(word_matches)
             
             if contains_phrase or contains_all_words:
                 filtered_items.append(item)
