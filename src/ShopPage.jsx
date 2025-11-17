@@ -221,8 +221,8 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
 
   // Настройка Intersection Observer для бесконечной прокрутки
   useEffect(() => {
-    // Не настраиваем, если нет товаров
-    if (allItems.length === 0 || displayedItems.length === 0) {
+    // Не настраиваем, если нет товаров или активен поиск
+    if (allItems.length === 0 || displayedItems.length === 0 || searchQuery.trim()) {
       return;
     }
 
