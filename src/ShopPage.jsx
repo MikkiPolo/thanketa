@@ -71,48 +71,51 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
 
   // Загрузка следующей порции товаров
   const loadMoreItems = useCallback(() => {
-    // Защита от повторных вызовов
-    if (isLoadingMore) {
-      return;
-    }
-    
-    if (allItems.length === 0) {
-      return;
-    }
+    // Используем функциональное обновление для проверки состояния
+    setIsLoadingMore(current => {
+      // Защита от повторных вызовов
+      if (current) {
+        return current;
+      }
+      
+      if (allItems.length === 0) {
+        return current;
+      }
 
-    setIsLoadingMore(true);
-
-    // Небольшая задержка для плавности
-    setTimeout(() => {
-      setDisplayedItems(prev => {
-        // Получаем ID уже показанных товаров
-        const shownIds = new Set(prev.map(item => item.id));
-        
-        // Перемешиваем все товары
-        const shuffled = shuffleArray(allItems);
-        
-        // Исключаем уже показанные
-        const remainingItems = shuffled.filter(item => !shownIds.has(item.id));
-        
-        // Берем следующую порцию
-        let nextBatch;
-        if (remainingItems.length >= itemsPerPage) {
-          nextBatch = remainingItems.slice(0, itemsPerPage);
-        } else if (remainingItems.length > 0) {
-          // Если осталось мало, добавляем перемешанные из всех
-          const additionalNeeded = itemsPerPage - remainingItems.length;
-          const additional = shuffleArray(allItems).slice(0, additionalNeeded);
-          nextBatch = [...remainingItems, ...additional];
-        } else {
-          // Все товары показаны - перемешиваем заново
-          nextBatch = shuffled.slice(0, itemsPerPage);
-        }
-        
-        setIsLoadingMore(false);
-        return [...prev, ...nextBatch];
-      });
-    }, 200);
-  }, [allItems, isLoadingMore, shuffleArray, itemsPerPage]);
+      // Устанавливаем флаг загрузки
+      setTimeout(() => {
+        setDisplayedItems(prev => {
+          // Получаем ID уже показанных товаров
+          const shownIds = new Set(prev.map(item => item.id));
+          
+          // Перемешиваем все товары
+          const shuffled = shuffleArray(allItems);
+          
+          // Исключаем уже показанные
+          const remainingItems = shuffled.filter(item => !shownIds.has(item.id));
+          
+          // Берем следующую порцию
+          let nextBatch;
+          if (remainingItems.length >= itemsPerPage) {
+            nextBatch = remainingItems.slice(0, itemsPerPage);
+          } else if (remainingItems.length > 0) {
+            // Если осталось мало, добавляем перемешанные из всех
+            const additionalNeeded = itemsPerPage - remainingItems.length;
+            const additional = shuffleArray(allItems).slice(0, additionalNeeded);
+            nextBatch = [...remainingItems, ...additional];
+          } else {
+            // Все товары показаны - перемешиваем заново
+            nextBatch = shuffled.slice(0, itemsPerPage);
+          }
+          
+          setIsLoadingMore(false);
+          return [...prev, ...nextBatch];
+        });
+      }, 200);
+      
+      return true; // Устанавливаем isLoadingMore в true
+    });
+  }, [allItems, shuffleArray, itemsPerPage]);
 
   // Используем Intersection Observer для отслеживания конца списка
   const observerTargetRef = useRef(null);
@@ -180,16 +183,32 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
     const setupObserver = () => {
       const target = observerTargetRef.current;
       if (!target) {
-        // Повторяем попытку
-        setTimeout(setupObserver, 100);
+        // Повторяем попытку максимум 20 раз
+        const retryCount = setupObserver.retryCount || 0;
+        if (retryCount < 20) {
+          setupObserver.retryCount = retryCount + 1;
+          setTimeout(setupObserver, 100);
+        }
         return;
       }
 
       // Определяем root для IntersectionObserver - это элемент, который скроллится
       const appContainer = document.querySelector('.app');
-      const scrollRoot = appContainer && appContainer.scrollHeight > appContainer.clientHeight 
-        ? appContainer 
-        : null;
+      const html = document.documentElement;
+      const body = document.body;
+      
+      // Проверяем, какой элемент скроллится
+      const appScrollHeight = appContainer ? appContainer.scrollHeight : 0;
+      const appClientHeight = appContainer ? appContainer.clientHeight : 0;
+      const htmlScrollHeight = html.scrollHeight || 0;
+      const htmlClientHeight = html.clientHeight || window.innerHeight || 0;
+      
+      let scrollRoot = null;
+      if (appContainer && appScrollHeight > appClientHeight) {
+        scrollRoot = appContainer;
+      } else if (htmlScrollHeight > htmlClientHeight) {
+        scrollRoot = null; // viewport
+      }
 
       const observer = new IntersectionObserver(
         (entries) => {
@@ -214,7 +233,7 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
         },
         {
           root: scrollRoot, // Используем .app как root, если он скроллится
-          rootMargin: '300px',
+          rootMargin: '400px', // Увеличиваем для более раннего срабатывания
           threshold: 0
         }
       );
@@ -226,18 +245,20 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
         console.error('Ошибка настройки IntersectionObserver:', error);
       }
     };
+    setupObserver.retryCount = 0;
 
     // Настраиваем observer после рендера
-    const timeoutId = setTimeout(setupObserver, 300);
+    const timeoutId = setTimeout(setupObserver, 500);
 
     // Запасной вариант: обработчик скролла
     let scrollTimeout;
     const handleScroll = () => {
-      setIsLoadingMore(current => {
-        if (current) return current; // Уже идет загрузка
-        
-        clearTimeout(scrollTimeout);
-        scrollTimeout = setTimeout(() => {
+      clearTimeout(scrollTimeout);
+      scrollTimeout = setTimeout(() => {
+        // Проверяем состояние через функциональное обновление
+        setIsLoadingMore(current => {
+          if (current) return current; // Уже идет загрузка
+          
           // Определяем, какой элемент скроллится
           const appContainer = document.querySelector('.app');
           let scrollTop = 0;
@@ -262,18 +283,18 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
           
           const distanceToBottom = scrollHeight - scrollTop - clientHeight;
 
-          // Если до конца меньше 300px, загружаем
-          if (distanceToBottom < 300) {
+          // Если до конца меньше 400px, загружаем
+          if (distanceToBottom < 400) {
             const now = Date.now();
             if (now - lastLoadTriggerRef.current > 500) {
               lastLoadTriggerRef.current = now;
               loadMoreItems();
             }
           }
-        }, 100);
-        
-        return current;
-      });
+          
+          return current;
+        });
+      }, 100);
     };
 
     // Добавляем обработчики на все возможные элементы
