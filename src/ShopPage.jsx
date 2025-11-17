@@ -214,26 +214,19 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
         (entries) => {
           entries.forEach(entry => {
             if (entry.isIntersecting) {
-              // Проверяем текущее состояние через замыкание
-              setIsLoadingMore(current => {
-                if (current) return current; // Уже идет загрузка
-                
-                const now = Date.now();
-                // Защита от частых вызовов
-                if (now - lastLoadTriggerRef.current > 500) {
-                  lastLoadTriggerRef.current = now;
-                  // Всегда загружаем больше - логика перемешивания в loadMoreItems
-                  loadMoreItems();
-                }
-                
-                return current;
-              });
+              const now = Date.now();
+              // Защита от частых вызовов
+              if (now - lastLoadTriggerRef.current > 500) {
+                lastLoadTriggerRef.current = now;
+                // Вызываем loadMoreItems напрямую - он сам проверит isLoadingMore
+                loadMoreItems();
+              }
             }
           });
         },
         {
           root: scrollRoot, // Используем .app как root, если он скроллится
-          rootMargin: '400px', // Увеличиваем для более раннего срабатывания
+          rootMargin: '500px', // Увеличиваем для более раннего срабатывания
           threshold: 0
         }
       );
@@ -255,45 +248,38 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
     const handleScroll = () => {
       clearTimeout(scrollTimeout);
       scrollTimeout = setTimeout(() => {
-        // Проверяем состояние через функциональное обновление
-        setIsLoadingMore(current => {
-          if (current) return current; // Уже идет загрузка
-          
-          // Определяем, какой элемент скроллится
-          const appContainer = document.querySelector('.app');
-          let scrollTop = 0;
-          let scrollHeight = 0;
-          let clientHeight = 0;
-          
-          if (appContainer && appContainer.scrollHeight > appContainer.clientHeight) {
-            // Скролл на .app
-            scrollTop = appContainer.scrollTop;
-            scrollHeight = appContainer.scrollHeight;
-            clientHeight = appContainer.clientHeight;
-          } else {
-            // Скролл на window
-            const html = document.documentElement;
-            scrollTop = window.pageYOffset || html.scrollTop || 0;
-            scrollHeight = Math.max(
-              html.scrollHeight || 0,
-              document.body.scrollHeight || 0
-            );
-            clientHeight = window.innerHeight || html.clientHeight || 0;
-          }
-          
-          const distanceToBottom = scrollHeight - scrollTop - clientHeight;
+        // Определяем, какой элемент скроллится
+        const appContainer = document.querySelector('.app');
+        let scrollTop = 0;
+        let scrollHeight = 0;
+        let clientHeight = 0;
+        
+        if (appContainer && appContainer.scrollHeight > appContainer.clientHeight) {
+          // Скролл на .app
+          scrollTop = appContainer.scrollTop;
+          scrollHeight = appContainer.scrollHeight;
+          clientHeight = appContainer.clientHeight;
+        } else {
+          // Скролл на window
+          const html = document.documentElement;
+          scrollTop = window.pageYOffset || html.scrollTop || 0;
+          scrollHeight = Math.max(
+            html.scrollHeight || 0,
+            document.body.scrollHeight || 0
+          );
+          clientHeight = window.innerHeight || html.clientHeight || 0;
+        }
+        
+        const distanceToBottom = scrollHeight - scrollTop - clientHeight;
 
-          // Если до конца меньше 400px, загружаем
-          if (distanceToBottom < 400) {
-            const now = Date.now();
-            if (now - lastLoadTriggerRef.current > 500) {
-              lastLoadTriggerRef.current = now;
-              loadMoreItems();
-            }
+        // Если до конца меньше 500px, загружаем
+        if (distanceToBottom < 500) {
+          const now = Date.now();
+          if (now - lastLoadTriggerRef.current > 500) {
+            lastLoadTriggerRef.current = now;
+            loadMoreItems();
           }
-          
-          return current;
-        });
+        }
       }, 100);
     };
 
