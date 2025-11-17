@@ -2898,6 +2898,7 @@ def search_items():
             return False
         
         # Фильтруем: товар должен содержать ВСЕ слова из запроса
+        # Приоритет: если запрос содержит существительное (последнее слово), оно должно быть в описании
         filtered_items = []
         for item in all_items:
             description = (item.get('description') or '').lower()
@@ -2906,24 +2907,24 @@ def search_items():
             
             # Проверяем, содержит ли текст всю фразу целиком (высший приоритет)
             if query_lower in text_to_search:
-                filtered_items.append(item)
+                filtered_items.append((item, 0))  # Приоритет 0 - точная фраза
                 continue
             
             # Проверяем, содержит ли текст все слова из запроса
             word_matches = [word_matches_in_text(word, text_to_search) for word in query_words_lower]
             if all(word_matches):
-                filtered_items.append(item)
+                # Приоритет: если последнее слово (обычно существительное) есть в описании - выше приоритет
+                last_word = query_words_lower[-1] if query_words_lower else ''
+                priority = 1
+                if last_word and word_matches_in_text(last_word, description):
+                    priority = 2  # Средний приоритет - есть основное слово
+                else:
+                    priority = 3  # Низкий приоритет - все слова есть, но основное не в описании
+                filtered_items.append((item, priority))
         
-        # Сортируем результаты: сначала те, где есть точная фраза, потом остальные
-        def sort_key(item):
-            description = (item.get('description') or '').lower()
-            category = (item.get('category') or '').lower()
-            text = f'{description} {category}'
-            # 0 - если содержит точную фразу, 1 - если только слова
-            return 0 if query_lower in text else 1
-        
-        filtered_items.sort(key=sort_key)
-        items = filtered_items[:500]  # Ограничиваем 500 результатами
+        # Сортируем результаты по приоритету
+        filtered_items.sort(key=lambda x: x[1])
+        items = [item for item, _ in filtered_items[:500]]  # Ограничиваем 500 результатами
         
         # Формируем image_url и добавляем brand_name
         for item in items:
