@@ -4,6 +4,8 @@ import ShopItemDetail from './ShopItemDetail';
 import LoadingSpinner from './LoadingSpinner';
 
 const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBack }) => {
+  console.error('🛍️ ShopPage компонент рендерится:', { telegramId, season });
+  
   const [allItems, setAllItems] = useState([]); // Все загруженные товары
   const [displayedItems, setDisplayedItems] = useState([]); // Товары для отображения
   const [loading, setLoading] = useState(true);
@@ -15,6 +17,7 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
 
   // Загрузка товаров брендов
   useEffect(() => {
+    console.error('🔄 ShopPage: начинаем загрузку товаров для сезона:', season);
     loadBrandItems();
   }, [season]);
 
@@ -40,11 +43,13 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
       const data = await response.json();
       const brandItems = data.items || [];
 
-      console.error('📦 Загружено товаров:', brandItems.length);
+      console.error('📦 ShopPage: Загружено товаров:', brandItems.length);
+      console.error('📦 ShopPage: Первые 3 товара:', brandItems.slice(0, 3).map(i => ({ id: i.id, description: i.description?.substring(0, 30) })));
+      
       setAllItems(brandItems);
       // Показываем первую порцию товаров
       const firstBatch = brandItems.slice(0, itemsPerPage);
-      console.error('👁️ Показываем первую порцию:', firstBatch.length, 'товаров');
+      console.error('👁️ ShopPage: Показываем первую порцию:', firstBatch.length, 'товаров из', brandItems.length);
       setDisplayedItems(firstBatch);
     } catch (err) {
       console.error('Ошибка загрузки товаров брендов:', err);
@@ -184,15 +189,23 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
 
   // Настройка Intersection Observer для бесконечной прокрутки
   useEffect(() => {
+    console.error('🔧 ShopPage: useEffect для бесконечной прокрутки вызван:', {
+      allItems: allItems.length,
+      displayedItems: displayedItems.length,
+      isLoadingMore,
+      hasObserverTarget: !!observerTargetRef.current
+    });
+    
     if (allItems.length === 0) {
-      console.error('⏸️ Observer не настроен: нет товаров');
+      console.error('⏸️ ShopPage: Observer не настроен: нет товаров (allItems.length = 0)');
       return;
     }
 
-    console.error('🔧 Настройка бесконечной прокрутки:', {
+    console.error('🔧 ShopPage: Настройка бесконечной прокрутки:', {
       displayedItems: displayedItems.length,
       allItems: allItems.length,
-      isLoadingMore
+      isLoadingMore,
+      itemsPerPage
     });
 
     // Очищаем предыдущий observer
