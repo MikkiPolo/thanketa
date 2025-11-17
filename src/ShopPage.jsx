@@ -237,6 +237,14 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
       } catch (error) {
         console.error('Ошибка настройки IntersectionObserver:', error);
       }
+      
+      // Тестовая проверка - вызываем loadMoreItems вручную через 2 секунды для теста
+      setTimeout(() => {
+        if (displayedItems.length < allItems.length) {
+          console.error('🧪 ТЕСТ: Принудительный вызов loadMoreItems через 2 секунды');
+          loadMoreItems();
+        }
+      }, 2000);
     };
     setupObserver.retryCount = 0;
 
@@ -432,16 +440,31 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
           ref={observerTargetRef}
           style={{ 
             width: '100%',
-            height: '50px',
-            marginTop: '2rem',
-            marginBottom: '2rem',
+            minHeight: '100px',
+            height: '100px',
+            marginTop: '3rem',
+            marginBottom: '3rem',
             position: 'relative',
             backgroundColor: 'transparent',
-            pointerEvents: 'none'
+            pointerEvents: 'none',
+            border: '1px dashed rgba(0,0,0,0.1)' // Временная визуальная индикация для отладки
           }}
           data-observer-target="true"
           aria-hidden="true"
-        />
+        >
+          {/* Временный маркер для отладки */}
+          <div style={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            fontSize: '12px',
+            color: 'rgba(0,0,0,0.3)',
+            whiteSpace: 'nowrap'
+          }}>
+            Триггер загрузки
+          </div>
+        </div>
       )}
     </div>
   );
