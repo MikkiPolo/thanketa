@@ -381,11 +381,12 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
     allItems: allItems.length,
     displayedItems: displayedItems.length,
     loading,
-    error
+    error,
+    willRenderTrigger: true // Теперь всегда рендерим
   });
   
   return (
-    <div className="card" ref={scrollContainerRef}>
+    <div className="card" ref={scrollContainerRef} style={{ position: 'relative' }}>
       <div className="wardrobe-header" style={{ marginBottom: '1rem' }}>
         <h2 style={{ fontSize: '1.5rem', fontWeight: '600' }}>Магазин</h2>
       </div>
@@ -454,53 +455,58 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
       </div>
       
       {/* Элемент-триггер для Intersection Observer - ВНЕ grid для надежности */}
-      {/* Рендерим всегда, если есть товары, даже если все уже показаны */}
-      {allItems.length > 0 && (
-        <div 
-          ref={observerTargetRef}
-          style={{ 
-            width: '100%',
-            minHeight: '200px',
-            height: '200px',
-            marginTop: '3rem',
-            marginBottom: '3rem',
-            position: 'relative',
-            backgroundColor: 'rgba(255, 0, 0, 0.15)', // Более яркий красный фон
-            pointerEvents: 'none',
-            border: '4px solid red', // Толстая красная рамка
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 10000, // Максимальный z-index
-            boxSizing: 'border-box'
-          }}
-          data-observer-target="true"
-        >
-          {/* Временный маркер для отладки */}
-          <div style={{
-            fontSize: '20px',
-            color: 'red',
-            fontWeight: 'bold',
-            textAlign: 'center',
-            padding: '1.5rem',
-            backgroundColor: 'white',
-            borderRadius: '8px',
-            boxShadow: '0 4px 12px rgba(255,0,0,0.5)',
-            border: '2px solid red'
-          }}>
-            🔴 ТРИГГЕР ЗАГРУЗКИ 🔴
-            <br />
-            <span style={{ fontSize: '14px', color: '#666', display: 'block', marginTop: '0.5rem' }}>
-              Показано: {displayedItems.length} / Всего: {allItems.length}
+      {/* ВРЕМЕННО: Рендерим ВСЕГДА для отладки, даже если нет товаров */}
+      <div 
+        ref={observerTargetRef}
+        style={{ 
+          width: '100%',
+          minHeight: '200px',
+          height: '200px',
+          marginTop: '3rem',
+          marginBottom: '3rem',
+          position: 'relative',
+          backgroundColor: 'rgba(255, 0, 0, 0.3)', // Очень яркий красный фон
+          pointerEvents: 'none',
+          border: '6px solid red', // Очень толстая красная рамка
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 10000, // Максимальный z-index
+          boxSizing: 'border-box',
+          flexShrink: 0 // Предотвращаем сжатие
+        }}
+        data-observer-target="true"
+      >
+        {/* Временный маркер для отладки */}
+        <div style={{
+          fontSize: '24px',
+          color: 'red',
+          fontWeight: 'bold',
+          textAlign: 'center',
+          padding: '2rem',
+          backgroundColor: 'white',
+          borderRadius: '8px',
+          boxShadow: '0 4px 12px rgba(255,0,0,0.5)',
+          border: '3px solid red',
+          minWidth: '300px'
+        }}>
+          🔴 ТРИГГЕР ЗАГРУЗКИ 🔴
+          <br />
+          <span style={{ fontSize: '16px', color: '#666', display: 'block', marginTop: '0.5rem' }}>
+            Показано: {displayedItems.length} / Всего: {allItems.length}
+          </span>
+          {allItems.length === 0 && (
+            <span style={{ fontSize: '14px', color: 'red', display: 'block', marginTop: '0.5rem', fontWeight: 'bold' }}>
+              ⚠️ ТОВАРЫ НЕ ЗАГРУЖЕНЫ!
             </span>
-            {displayedItems.length >= allItems.length && (
-              <span style={{ fontSize: '12px', color: 'orange', display: 'block', marginTop: '0.5rem' }}>
-                Все товары показаны - будет перемешивание
-              </span>
-            )}
-          </div>
+          )}
+          {displayedItems.length >= allItems.length && allItems.length > 0 && (
+            <span style={{ fontSize: '14px', color: 'orange', display: 'block', marginTop: '0.5rem' }}>
+              Все товары показаны - будет перемешивание
+            </span>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 };
