@@ -185,6 +185,12 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
         return;
       }
 
+      // Определяем root для IntersectionObserver - это элемент, который скроллится
+      const appContainer = document.querySelector('.app');
+      const scrollRoot = appContainer && appContainer.scrollHeight > appContainer.clientHeight 
+        ? appContainer 
+        : null;
+
       const observer = new IntersectionObserver(
         (entries) => {
           entries.forEach(entry => {
@@ -207,7 +213,7 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
           });
         },
         {
-          root: null,
+          root: scrollRoot, // Используем .app как root, если он скроллится
           rootMargin: '300px',
           threshold: 0
         }
@@ -232,13 +238,28 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
         
         clearTimeout(scrollTimeout);
         scrollTimeout = setTimeout(() => {
-          const html = document.documentElement;
-          const scrollTop = window.pageYOffset || html.scrollTop || 0;
-          const scrollHeight = Math.max(
-            html.scrollHeight || 0,
-            document.body.scrollHeight || 0
-          );
-          const clientHeight = window.innerHeight || html.clientHeight || 0;
+          // Определяем, какой элемент скроллится
+          const appContainer = document.querySelector('.app');
+          let scrollTop = 0;
+          let scrollHeight = 0;
+          let clientHeight = 0;
+          
+          if (appContainer && appContainer.scrollHeight > appContainer.clientHeight) {
+            // Скролл на .app
+            scrollTop = appContainer.scrollTop;
+            scrollHeight = appContainer.scrollHeight;
+            clientHeight = appContainer.clientHeight;
+          } else {
+            // Скролл на window
+            const html = document.documentElement;
+            scrollTop = window.pageYOffset || html.scrollTop || 0;
+            scrollHeight = Math.max(
+              html.scrollHeight || 0,
+              document.body.scrollHeight || 0
+            );
+            clientHeight = window.innerHeight || html.clientHeight || 0;
+          }
+          
           const distanceToBottom = scrollHeight - scrollTop - clientHeight;
 
           // Если до конца меньше 300px, загружаем
@@ -255,7 +276,7 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
       });
     };
 
-    // Добавляем обработчики
+    // Добавляем обработчики на все возможные элементы
     window.addEventListener('scroll', handleScroll, { passive: true });
     window.addEventListener('wheel', handleScroll, { passive: true });
     
