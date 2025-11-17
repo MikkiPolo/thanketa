@@ -425,6 +425,67 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
         <h2 style={{ fontSize: '1.5rem', fontWeight: '600' }}>Магазин</h2>
       </div>
 
+      {/* Поле поиска */}
+      <div className="search-container" style={{ marginBottom: '1.5rem' }}>
+        <div style={{ position: 'relative' }}>
+          <Search 
+            size={20} 
+            style={{ 
+              position: 'absolute', 
+              left: '1rem', 
+              top: '50%', 
+              transform: 'translateY(-50%)',
+              color: 'var(--color-text-light)',
+              pointerEvents: 'none'
+            }} 
+          />
+          <input
+            type="text"
+            className="search-input"
+            placeholder="Поиск товаров (например: белая рубашка)"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            style={{
+              paddingLeft: '3rem',
+              paddingRight: searchQuery ? '3rem' : '1rem'
+            }}
+          />
+          {searchQuery && (
+            <button
+              className="clear-search-btn"
+              onClick={() => setSearchQuery('')}
+              style={{
+                position: 'absolute',
+                right: '0.5rem',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                background: 'none',
+                border: 'none',
+                color: 'var(--color-text-light)',
+                cursor: 'pointer',
+                padding: '0.5rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+              aria-label="Очистить поиск"
+            >
+              <X size={18} />
+            </button>
+          )}
+        </div>
+        {searchQuery.trim() && (
+          <div style={{ 
+            marginTop: '0.5rem', 
+            fontSize: '0.875rem', 
+            color: 'var(--color-text-light)',
+            textAlign: 'center'
+          }}>
+            Найдено: {filteredItems.length} {filteredItems.length === 1 ? 'товар' : filteredItems.length < 5 ? 'товара' : 'товаров'}
+          </div>
+        )}
+      </div>
+
       {/* Сетка товаров (точно как в гардеробе) */}
       <div className="wardrobe-grid">
         {displayedItems.length === 0 ? (
