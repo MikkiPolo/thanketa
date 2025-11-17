@@ -2887,8 +2887,6 @@ def search_items():
         
         items = filtered_items[:500]  # Ограничиваем 500 результатами
         
-        items = response.data if response.data else []
-        
         # Формируем image_url и добавляем brand_name
         for item in items:
             if item.get('image_id') and item.get('brand_id'):
