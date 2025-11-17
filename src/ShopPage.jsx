@@ -280,8 +280,8 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
         },
         {
           root: null, // viewport
-          rootMargin: '600px', // Начинаем загрузку за 600px до конца
-          threshold: [0, 0.01, 0.1, 0.5, 1.0] // Несколько порогов
+          rootMargin: '800px 0px', // Начинаем загрузку за 800px до конца (только сверху и снизу)
+          threshold: 0 // Срабатывает как только элемент появляется в viewport
         }
       );
 
@@ -295,7 +295,10 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
     };
 
     // Задержка для гарантии, что DOM обновлен
-    setTimeout(setupObserver, 200);
+    // Используем requestAnimationFrame для гарантии, что DOM готов
+    requestAnimationFrame(() => {
+      setTimeout(setupObserver, 300);
+    });
 
     // Запасной вариант: обработчик скролла (более агрессивный)
     let scrollTimeout;
@@ -449,25 +452,19 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
             ref={observerTargetRef}
             style={{ 
               gridColumn: '1 / -1', 
-              height: '100px', 
+              minHeight: '200px', 
+              height: '200px',
               width: '100%',
-              marginTop: '2rem',
-              marginBottom: '1rem',
+              marginTop: '3rem',
+              marginBottom: '2rem',
               position: 'relative',
               backgroundColor: 'transparent',
-              pointerEvents: 'none'
+              pointerEvents: 'none',
+              display: 'block'
             }}
             data-observer-target="true"
-          >
-            {/* Невидимый маркер для отладки */}
-            <div style={{ 
-              height: '2px', 
-              width: '100%',
-              backgroundColor: 'transparent',
-              position: 'absolute',
-              top: '50%'
-            }} />
-          </div>
+            aria-hidden="true"
+          />
         )}
         
         {/* Индикатор загрузки */}
