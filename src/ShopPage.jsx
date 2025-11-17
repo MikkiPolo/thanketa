@@ -75,50 +75,60 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
     return shuffled;
   }, []);
 
-  // Фильтрация товаров по поисковому запросу
-  const filterItems = useCallback((items, query) => {
+  // Поиск товаров через бэкенд (по всей БД)
+  const [searchResults, setSearchResults] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
+
+  const searchItems = useCallback(async (query) => {
     if (!query || !query.trim()) {
-      return items;
+      setSearchResults([]);
+      return;
     }
-    
-    const searchLower = query.toLowerCase().trim();
-    return items.filter(item => {
-      // Ищем в описании товара
-      const description = (item.description || '').toLowerCase();
-      // Также можно искать в категории и названии бренда
-      const category = (item.category || '').toLowerCase();
-      const brandName = (item.brand_name || '').toLowerCase();
-      
-      return description.includes(searchLower) || 
-             category.includes(searchLower) || 
-             brandName.includes(searchLower);
-    });
+
+    try {
+      setIsSearching(true);
+      const { API_ENDPOINTS, BACKEND_URL } = await import('./config');
+      const response = await fetch(`${BACKEND_URL}${API_ENDPOINTS.SEARCH_ITEMS}?q=${encodeURIComponent(query)}`, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const data = await response.json();
+      setSearchResults(data.items || []);
+      setDisplayedItems(data.items || []);
+    } catch (err) {
+      console.error('Ошибка поиска товаров:', err);
+      setSearchResults([]);
+      setDisplayedItems([]);
+    } finally {
+      setIsSearching(false);
+    }
   }, []);
 
-  // Фильтрация и отображение товаров при поиске
-  const filterAndDisplayItems = useCallback((items, query) => {
-    const filtered = filterItems(items, query);
-    setDisplayedItems(filtered);
-  }, [filterItems]);
-
-  // Мемоизация отфильтрованных товаров
-  const filteredItems = useMemo(() => {
-    return filterItems(allItems, searchQuery);
-  }, [allItems, searchQuery, filterItems]);
-
-  // Эффект для обновления отображаемых товаров при изменении поиска
+  // Эффект для поиска при изменении запроса
   useEffect(() => {
-    if (searchQuery.trim()) {
-      // Режим поиска - показываем все отфильтрованные товары
-      filterAndDisplayItems(allItems, searchQuery);
-    } else {
-      // Обычный режим - показываем первую порцию
-      if (allItems.length > 0) {
-        const firstBatch = allItems.slice(0, itemsPerPage);
-        setDisplayedItems(firstBatch);
+    const timeoutId = setTimeout(() => {
+      if (searchQuery.trim()) {
+        // Режим поиска - ищем через бэкенд
+        searchItems(searchQuery);
+      } else {
+        // Обычный режим - показываем первую порцию
+        setSearchResults([]);
+        if (allItems.length > 0) {
+          const firstBatch = allItems.slice(0, itemsPerPage);
+          setDisplayedItems(firstBatch);
+        }
       }
-    }
-  }, [searchQuery, allItems, filterAndDisplayItems, itemsPerPage]);
+    }, 300); // Debounce 300ms
+
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery, searchItems, allItems, itemsPerPage]);
 
   // Загрузка следующей порции товаров
   const loadMoreItems = useCallback(() => {
@@ -481,7 +491,11 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
             color: 'var(--color-text-light)',
             textAlign: 'center'
           }}>
-            Найдено: {filteredItems.length} {filteredItems.length === 1 ? 'товар' : filteredItems.length < 5 ? 'товара' : 'товаров'}
+            {isSearching ? (
+              'Поиск...'
+            ) : (
+              `Найдено: ${searchResults.length} ${searchResults.length === 1 ? 'товар' : searchResults.length < 5 ? 'товара' : 'товаров'}`
+            )}
           </div>
         )}
       </div>

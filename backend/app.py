@@ -2836,5 +2836,56 @@ def chat_style():
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
+@app.route('/search-items', methods=['GET'])
+def search_items():
+    """Поиск товаров по всей БД по описанию, категории и названию бренда"""
+    try:
+        from brand_service_v4 import get_supabase_client
+        supabase = get_supabase_client()
+        
+        if not supabase:
+            return jsonify({'error': 'Supabase не доступен'}), 500
+        
+        query = request.args.get('q', '').strip()
+        if not query:
+            return jsonify({'error': 'Поисковый запрос не может быть пустым'}), 400
+        
+        # Поиск по всей БД используя ilike для нечувствительного к регистру поиска
+        # Ищем в description, category
+        response = supabase.table('brand_items') \
+            .select('id, brand_id, category, season, description, image_id, shop_link, price, currency') \
+            .eq('is_approved', True) \
+            .eq('is_active', True) \
+            .or_(f'description.ilike.%{query}%,category.ilike.%{query}%') \
+            .limit(500) \
+            .execute()
+        
+        items = response.data if response.data else []
+        
+        # Формируем image_url и добавляем brand_name
+        for item in items:
+            if item.get('image_id') and item.get('brand_id'):
+                item['image_url'] = f"https://lipolo.store/storage/v1/object/public/brand-items-images/{item['brand_id']}/{item['image_id']}.jpg"
+            else:
+                item['image_url'] = None
+            item['is_brand_item'] = True
+            item['brand_name'] = 'LiMango'
+            if 'shop_link' not in item or not item['shop_link']:
+                item['shop_link'] = None
+        
+        print(f"🔍 Поиск '{query}': найдено {len(items)} товаров")
+        
+        return jsonify({
+            'items': items,
+            'count': len(items),
+            'query': query
+        })
+        
+    except Exception as e:
+        print(f"❌ Ошибка поиска товаров: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5001, debug=False) 
