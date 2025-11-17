@@ -2850,19 +2850,42 @@ def search_items():
         if not query:
             return jsonify({'error': 'Поисковый запрос не может быть пустым'}), 400
         
-        # Поиск по всей БД используя ilike для нечувствительного к регистру поиска
-        # Ищем в description, category
-        # Формат для OR: 'column1.ilike.value,column2.ilike.value'
-        search_pattern = f'%{query}%'
-        or_condition = f'description.ilike.{search_pattern},category.ilike.{search_pattern}'
+        # Разбиваем запрос на слова для более гибкого поиска
+        # Например, "белая рубашка" -> ищем товары, содержащие "белая" И "рубашка"
+        query_words = [w.strip() for w in query.split() if w.strip()]
         
-        response = supabase.table('brand_items') \
+        if not query_words:
+            return jsonify({'error': 'Поисковый запрос не может быть пустым'}), 400
+        
+        # Получаем все активные товары
+        base_query = supabase.table('brand_items') \
             .select('id, brand_id, category, season, description, image_id, shop_link, price, currency') \
             .eq('is_approved', True) \
-            .eq('is_active', True) \
-            .or_(or_condition) \
-            .limit(500) \
-            .execute()
+            .eq('is_active', True)
+        
+        # Фильтруем в Python, так как Supabase не поддерживает сложные AND/OR комбинации для ilike
+        response = base_query.limit(10000).execute()  # Получаем больше товаров для фильтрации
+        all_items = response.data if response.data else []
+        
+        # Фильтруем товары: ищем товары, где description или category содержат ВСЕ слова из запроса
+        query_lower = query.lower()
+        query_words_lower = [w.lower() for w in query_words]
+        
+        filtered_items = []
+        for item in all_items:
+            description = (item.get('description') or '').lower()
+            category = (item.get('category') or '').lower()
+            text_to_search = f'{description} {category}'
+            
+            # Проверяем, содержит ли текст все слова из запроса
+            # Или содержит всю фразу целиком
+            contains_all_words = all(word in text_to_search for word in query_words_lower)
+            contains_phrase = query_lower in text_to_search
+            
+            if contains_phrase or contains_all_words:
+                filtered_items.append(item)
+        
+        items = filtered_items[:500]  # Ограничиваем 500 результатами
         
         items = response.data if response.data else []
         
