@@ -124,6 +124,33 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
   const observerRef = useRef(null);
   const lastLoadTriggerRef = useRef(0);
 
+  // Функция проверки необходимости подгрузки
+  const checkShouldLoadMore = useCallback(() => {
+    if (isLoadingMore || allItems.length === 0) return false;
+
+    const appContainer = document.querySelector('.app');
+    if (!appContainer) return false;
+
+    const scrollTop = appContainer.scrollTop || window.pageYOffset || document.documentElement.scrollTop;
+    const scrollHeight = appContainer.scrollHeight || document.documentElement.scrollHeight;
+    const clientHeight = appContainer.clientHeight || window.innerHeight;
+
+    // Проверяем, доскроллили ли до 80% от конца
+    const distanceToBottom = scrollHeight - scrollTop - clientHeight;
+    const threshold = clientHeight * 0.2; // 20% от высоты экрана
+
+    console.error('📏 Проверка скролла:', {
+      scrollTop,
+      scrollHeight,
+      clientHeight,
+      distanceToBottom,
+      threshold,
+      shouldLoad: distanceToBottom < threshold
+    });
+
+    return distanceToBottom < threshold;
+  }, [isLoadingMore, allItems.length]);
+
   // Настройка Intersection Observer для бесконечной прокрутки
   useEffect(() => {
     // Очищаем предыдущий observer
@@ -167,13 +194,12 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
             isLoadingMore,
             displayedItems: displayedItems.length,
             allItems: allItems.length,
-            intersectionRatio: entry.intersectionRatio,
-            boundingClientRect: entry.boundingClientRect
+            intersectionRatio: entry.intersectionRatio
           });
           
           if (entry.isIntersecting && !isLoadingMore) {
             lastLoadTriggerRef.current = now;
-            console.error('🔄 Триггер подгрузки: элемент виден, загружаем еще товары');
+            console.error('🔄 Триггер подгрузки (Observer): элемент виден, загружаем еще товары');
             loadMoreItems();
           }
         },
@@ -191,13 +217,35 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
 
     setupObserver();
 
+    // Запасной вариант: обработчик скролла
+    const handleScroll = () => {
+      if (checkShouldLoadMore()) {
+        const now = Date.now();
+        if (now - lastLoadTriggerRef.current > 500) {
+          lastLoadTriggerRef.current = now;
+          console.error('🔄 Триггер подгрузки (Scroll): доскроллили до конца');
+          loadMoreItems();
+        }
+      }
+    };
+
+    const appContainer = document.querySelector('.app');
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    if (appContainer) {
+      appContainer.addEventListener('scroll', handleScroll, { passive: true });
+    }
+
     return () => {
       if (observerRef.current) {
         observerRef.current.disconnect();
         observerRef.current = null;
       }
+      window.removeEventListener('scroll', handleScroll);
+      if (appContainer) {
+        appContainer.removeEventListener('scroll', handleScroll);
+      }
     };
-  }, [displayedItems.length, allItems.length, isLoadingMore, loadMoreItems]);
+  }, [displayedItems.length, allItems.length, isLoadingMore, loadMoreItems, checkShouldLoadMore]);
 
   const handleItemClick = (item) => {
     setSelectedItem(item);
