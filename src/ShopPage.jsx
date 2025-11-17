@@ -164,12 +164,6 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
       return;
     }
 
-    // Если все товары уже показаны, не настраиваем observer
-    if (displayedItems.length >= allItems.length && displayedItems.length < itemsPerPage * 2) {
-      // Если товаров мало и все показаны, не нужен observer
-      return;
-    }
-
     // Очищаем предыдущий observer
     if (observerRef.current) {
       observerRef.current.disconnect();
@@ -179,8 +173,7 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
     const setupObserver = () => {
       const target = observerTargetRef.current;
       if (!target) {
-        // Повторяем попытку через 200ms
-        setTimeout(setupObserver, 200);
+        setTimeout(setupObserver, 100);
         return;
       }
 
@@ -189,7 +182,7 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
           for (const entry of entries) {
             if (entry.isIntersecting && !isLoadingMore) {
               const now = Date.now();
-              if (now - lastLoadTriggerRef.current > 1000) { // 1 секунда между вызовами
+              if (now - lastLoadTriggerRef.current > 800) {
                 lastLoadTriggerRef.current = now;
                 loadMoreItems();
               }
@@ -198,7 +191,7 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
         },
         {
           root: null,
-          rootMargin: '1000px 0px', // Очень большой отступ для раннего срабатывания
+          rootMargin: '500px', // Загружаем за 500px до появления элемента
           threshold: 0
         }
       );
@@ -208,34 +201,40 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
     };
 
     // Настраиваем observer после рендера
-    const timeoutId = setTimeout(setupObserver, 500);
+    const timeoutId = setTimeout(setupObserver, 300);
 
-    // Запасной вариант: обработчик скролла
+    // Запасной вариант: обработчик скролла (более агрессивный)
     let scrollTimeout;
     const handleScroll = () => {
+      if (isLoadingMore) return;
+      
       clearTimeout(scrollTimeout);
       scrollTimeout = setTimeout(() => {
-        if (isLoadingMore) return;
-        
         const html = document.documentElement;
-        const scrollTop = window.pageYOffset || html.scrollTop;
-        const scrollHeight = Math.max(html.scrollHeight, document.body.scrollHeight);
-        const clientHeight = window.innerHeight || html.clientHeight;
+        const scrollTop = window.pageYOffset || html.scrollTop || 0;
+        const scrollHeight = Math.max(
+          html.scrollHeight || 0,
+          document.body.scrollHeight || 0,
+          html.offsetHeight || 0
+        );
+        const clientHeight = window.innerHeight || html.clientHeight || 0;
         const distanceToBottom = scrollHeight - scrollTop - clientHeight;
 
-        // Если до конца меньше 500px, загружаем
-        if (distanceToBottom < 500) {
+        // Если до конца меньше 300px, загружаем
+        if (distanceToBottom < 300) {
           const now = Date.now();
-          if (now - lastLoadTriggerRef.current > 1000) {
+          if (now - lastLoadTriggerRef.current > 800) {
             lastLoadTriggerRef.current = now;
             loadMoreItems();
           }
         }
-      }, 150);
+      }, 100);
     };
 
-    window.addEventListener('scroll', handleScroll, { passive: true });
+    // Добавляем обработчики на все возможные события скролла
+    window.addEventListener('scroll', handleScroll, { passive: true, capture: true });
     window.addEventListener('wheel', handleScroll, { passive: true });
+    window.addEventListener('touchmove', handleScroll, { passive: true });
     
     const appContainer = document.querySelector('.app');
     if (appContainer) {
@@ -249,8 +248,9 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
         observerRef.current.disconnect();
         observerRef.current = null;
       }
-      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('scroll', handleScroll, { capture: true });
       window.removeEventListener('wheel', handleScroll);
+      window.removeEventListener('touchmove', handleScroll);
       if (appContainer) {
         appContainer.removeEventListener('scroll', handleScroll);
       }
@@ -350,27 +350,6 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
           ))
         )}
         
-        {/* Элемент-триггер для Intersection Observer - должен быть сразу после товаров */}
-        {displayedItems.length > 0 && (
-          <div 
-            ref={observerTargetRef}
-            style={{ 
-              gridColumn: '1 / -1', 
-              minHeight: '200px', 
-              height: '200px',
-              width: '100%',
-              marginTop: '3rem',
-              marginBottom: '2rem',
-              position: 'relative',
-              backgroundColor: 'transparent',
-              pointerEvents: 'none',
-              display: 'block'
-            }}
-            data-observer-target="true"
-            aria-hidden="true"
-          />
-        )}
-        
         {/* Индикатор загрузки */}
         {isLoadingMore && (
           <div style={{ 
@@ -396,6 +375,24 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
         {/* Пустые карточки-спейсеры для предотвращения перекрытия навигацией */}
         <div className="wardrobe-spacer"></div>
       </div>
+      
+      {/* Элемент-триггер для Intersection Observer - ВНЕ grid для надежности */}
+      {displayedItems.length > 0 && (
+        <div 
+          ref={observerTargetRef}
+          style={{ 
+            width: '100%',
+            height: '1px',
+            marginTop: '2rem',
+            marginBottom: '2rem',
+            position: 'relative',
+            backgroundColor: 'transparent',
+            pointerEvents: 'none'
+          }}
+          data-observer-target="true"
+          aria-hidden="true"
+        />
+      )}
     </div>
   );
 };
