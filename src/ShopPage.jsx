@@ -166,13 +166,8 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
 
   // Настройка Intersection Observer для бесконечной прокрутки
   useEffect(() => {
-    // Не настраиваем, если нет товаров или все уже показаны
+    // Не настраиваем, если нет товаров
     if (allItems.length === 0 || displayedItems.length === 0) {
-      return;
-    }
-
-    // Если все товары уже показаны и их меньше чем itemsPerPage * 2, не нужен observer
-    if (displayedItems.length >= allItems.length && allItems.length < itemsPerPage * 2) {
       return;
     }
 
@@ -182,44 +177,39 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
       observerRef.current = null;
     }
 
-    let isSetup = false;
-
     const setupObserver = () => {
-      if (isSetup) return;
-      
       const target = observerTargetRef.current;
       if (!target) {
-        // Повторяем попытку максимум 10 раз
-        const retryCount = setupObserver.retryCount || 0;
-        if (retryCount < 10) {
-          setupObserver.retryCount = retryCount + 1;
-          setTimeout(setupObserver, 200);
-        }
+        // Повторяем попытку
+        setTimeout(setupObserver, 100);
         return;
       }
-
-      isSetup = true;
 
       const observer = new IntersectionObserver(
         (entries) => {
           entries.forEach(entry => {
             if (entry.isIntersecting) {
-              const now = Date.now();
-              // Защита от частых вызовов
-              if (now - lastLoadTriggerRef.current > 800 && !isLoadingMore) {
-                lastLoadTriggerRef.current = now;
-                // Проверяем, есть ли еще товары для загрузки
-                if (displayedItems.length < allItems.length || allItems.length >= itemsPerPage * 2) {
+              // Проверяем текущее состояние через замыкание
+              setIsLoadingMore(current => {
+                if (current) return current; // Уже идет загрузка
+                
+                const now = Date.now();
+                // Защита от частых вызовов
+                if (now - lastLoadTriggerRef.current > 500) {
+                  lastLoadTriggerRef.current = now;
+                  // Всегда загружаем больше - логика перемешивания в loadMoreItems
                   loadMoreItems();
                 }
-              }
+                
+                return current;
+              });
             }
           });
         },
         {
-          root: null, // viewport
-          rootMargin: '200px', // Загружаем за 200px до появления элемента
-          threshold: 0 // Срабатывает как только элемент появляется
+          root: null,
+          rootMargin: '300px',
+          threshold: 0
         }
       );
 
@@ -230,36 +220,39 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
         console.error('Ошибка настройки IntersectionObserver:', error);
       }
     };
-    setupObserver.retryCount = 0;
 
     // Настраиваем observer после рендера
-    const timeoutId = setTimeout(setupObserver, 500);
+    const timeoutId = setTimeout(setupObserver, 300);
 
     // Запасной вариант: обработчик скролла
     let scrollTimeout;
     const handleScroll = () => {
-      if (isLoadingMore) return;
-      
-      clearTimeout(scrollTimeout);
-      scrollTimeout = setTimeout(() => {
-        const html = document.documentElement;
-        const scrollTop = window.pageYOffset || html.scrollTop || 0;
-        const scrollHeight = Math.max(
-          html.scrollHeight || 0,
-          document.body.scrollHeight || 0
-        );
-        const clientHeight = window.innerHeight || html.clientHeight || 0;
-        const distanceToBottom = scrollHeight - scrollTop - clientHeight;
+      setIsLoadingMore(current => {
+        if (current) return current; // Уже идет загрузка
+        
+        clearTimeout(scrollTimeout);
+        scrollTimeout = setTimeout(() => {
+          const html = document.documentElement;
+          const scrollTop = window.pageYOffset || html.scrollTop || 0;
+          const scrollHeight = Math.max(
+            html.scrollHeight || 0,
+            document.body.scrollHeight || 0
+          );
+          const clientHeight = window.innerHeight || html.clientHeight || 0;
+          const distanceToBottom = scrollHeight - scrollTop - clientHeight;
 
-        // Если до конца меньше 200px, загружаем
-        if (distanceToBottom < 200) {
-          const now = Date.now();
-          if (now - lastLoadTriggerRef.current > 1000) {
-            lastLoadTriggerRef.current = now;
-            loadMoreItems();
+          // Если до конца меньше 300px, загружаем
+          if (distanceToBottom < 300) {
+            const now = Date.now();
+            if (now - lastLoadTriggerRef.current > 500) {
+              lastLoadTriggerRef.current = now;
+              loadMoreItems();
+            }
           }
-        }
-      }, 150);
+        }, 100);
+        
+        return current;
+      });
     };
 
     // Добавляем обработчики
@@ -272,7 +265,6 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
     }
 
     return () => {
-      isSetup = false;
       clearTimeout(timeoutId);
       clearTimeout(scrollTimeout);
       if (observerRef.current) {
@@ -285,7 +277,7 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
         appContainer.removeEventListener('scroll', handleScroll);
       }
     };
-  }, [displayedItems.length, allItems.length, isLoadingMore, loadMoreItems]);
+  }, [displayedItems.length, allItems.length, loadMoreItems]);
 
   const handleItemClick = (item) => {
     setSelectedItem(item);
