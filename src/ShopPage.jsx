@@ -184,6 +184,12 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
       return;
     }
 
+    console.error('🔧 Настройка бесконечной прокрутки:', {
+      displayedItems: displayedItems.length,
+      allItems: allItems.length,
+      isLoadingMore
+    });
+
     // Очищаем предыдущий observer
     if (observerRef.current) {
       observerRef.current.disconnect();
@@ -191,86 +197,117 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
     }
 
     // Ждем, пока элемент-триггер появится в DOM
+    let retryCount = 0;
+    const maxRetries = 20; // Максимум 2 секунды ожидания
+    
     const setupObserver = () => {
       if (!observerTargetRef.current) {
-        console.error('⏸️ Элемент-триггер еще не в DOM, повторяем через 100ms');
-        setTimeout(setupObserver, 100);
+        retryCount++;
+        if (retryCount < maxRetries) {
+          console.error(`⏸️ Элемент-триггер еще не в DOM (попытка ${retryCount}/${maxRetries}), повторяем через 100ms`);
+          setTimeout(setupObserver, 100);
+        } else {
+          console.error('❌ Элемент-триггер не найден после всех попыток');
+        }
         return;
       }
 
       console.error('👁️ Настраиваем Intersection Observer:', {
         displayedItems: displayedItems.length,
         allItems: allItems.length,
-        hasTarget: !!observerTargetRef.current
+        hasTarget: !!observerTargetRef.current,
+        targetElement: observerTargetRef.current
       });
 
       const observer = new IntersectionObserver(
         (entries) => {
-          const entry = entries[0];
-          const now = Date.now();
-          
-          // Защита от частых срабатываний (минимум 500ms между вызовами)
-          if (now - lastLoadTriggerRef.current < 500) {
-            return;
-          }
+          entries.forEach(entry => {
+            const now = Date.now();
+            
+            // Защита от частых срабатываний (минимум 500ms между вызовами)
+            if (now - lastLoadTriggerRef.current < 500) {
+              return;
+            }
 
-          console.error('👀 Intersection Observer событие:', {
-            isIntersecting: entry.isIntersecting,
-            isLoadingMore,
-            displayedItems: displayedItems.length,
-            allItems: allItems.length,
-            intersectionRatio: entry.intersectionRatio
+            console.error('👀 Intersection Observer событие:', {
+              isIntersecting: entry.isIntersecting,
+              isLoadingMore,
+              displayedItems: displayedItems.length,
+              allItems: allItems.length,
+              intersectionRatio: entry.intersectionRatio,
+              boundingClientRect: {
+                top: entry.boundingClientRect.top,
+                bottom: entry.boundingClientRect.bottom,
+                height: entry.boundingClientRect.height
+              }
+            });
+            
+            if (entry.isIntersecting && !isLoadingMore) {
+              lastLoadTriggerRef.current = now;
+              console.error('🔄 Триггер подгрузки (Observer): элемент виден, загружаем еще товары');
+              loadMoreItems();
+            }
           });
-          
-          if (entry.isIntersecting && !isLoadingMore) {
-            lastLoadTriggerRef.current = now;
-            console.error('🔄 Триггер подгрузки (Observer): элемент виден, загружаем еще товары');
-            loadMoreItems();
-          }
         },
         {
           root: null, // viewport
-          rootMargin: '500px', // Начинаем загрузку за 500px до конца
-          threshold: 0.01 // Минимальный порог
+          rootMargin: '600px', // Начинаем загрузку за 600px до конца
+          threshold: [0, 0.01, 0.1, 0.5, 1.0] // Несколько порогов
         }
       );
 
-      observer.observe(observerTargetRef.current);
-      observerRef.current = observer;
-      console.error('✅ Observer настроен и наблюдает за элементом');
+      try {
+        observer.observe(observerTargetRef.current);
+        observerRef.current = observer;
+        console.error('✅ Observer настроен и наблюдает за элементом');
+      } catch (error) {
+        console.error('❌ Ошибка настройки Observer:', error);
+      }
     };
 
     // Задержка для гарантии, что DOM обновлен
-    setTimeout(setupObserver, 100);
+    setTimeout(setupObserver, 200);
 
-    // Запасной вариант: обработчик скролла
+    // Запасной вариант: обработчик скролла (более агрессивный)
+    let scrollTimeout;
     const handleScroll = () => {
-      if (checkShouldLoadMore()) {
-        const now = Date.now();
-        if (now - lastLoadTriggerRef.current > 500) {
-          lastLoadTriggerRef.current = now;
-          console.error('🔄 Триггер подгрузки (Scroll): доскроллили до конца');
-          loadMoreItems();
+      // Throttle - проверяем не чаще раза в 100ms
+      clearTimeout(scrollTimeout);
+      scrollTimeout = setTimeout(() => {
+        if (checkShouldLoadMore()) {
+          const now = Date.now();
+          if (now - lastLoadTriggerRef.current > 500) {
+            lastLoadTriggerRef.current = now;
+            console.error('🔄 Триггер подгрузки (Scroll): доскроллили до конца');
+            loadMoreItems();
+          }
         }
-      }
+      }, 100);
     };
 
     // Добавляем обработчики на все возможные скроллируемые элементы
     window.addEventListener('scroll', handleScroll, { passive: true });
     window.addEventListener('wheel', handleScroll, { passive: true });
+    window.addEventListener('touchmove', handleScroll, { passive: true });
     
     const appContainer = document.querySelector('.app');
     if (appContainer) {
       appContainer.addEventListener('scroll', handleScroll, { passive: true });
     }
 
+    // Также проверяем при изменении размера окна
+    window.addEventListener('resize', handleScroll, { passive: true });
+
     return () => {
+      clearTimeout(scrollTimeout);
       if (observerRef.current) {
         observerRef.current.disconnect();
         observerRef.current = null;
       }
       window.removeEventListener('scroll', handleScroll);
       window.removeEventListener('wheel', handleScroll);
+      window.removeEventListener('touchmove', handleScroll);
+      window.removeEventListener('resize', handleScroll);
       if (appContainer) {
         appContainer.removeEventListener('scroll', handleScroll);
       }
@@ -371,17 +408,21 @@ const ShopPage = ({ telegramId, season = 'Осень', temperature = 15.0, onBac
         )}
         
         {/* Элемент-триггер для Intersection Observer - должен быть сразу после товаров */}
-        <div 
-          ref={observerTargetRef}
-          style={{ 
-            gridColumn: '1 / -1', 
-            height: '50px', 
-            width: '100%',
-            marginTop: '1rem',
-            position: 'relative'
-          }}
-          data-observer-target="true"
-        />
+        {displayedItems.length > 0 && (
+          <div 
+            ref={observerTargetRef}
+            style={{ 
+              gridColumn: '1 / -1', 
+              height: '1px', 
+              width: '100%',
+              marginTop: '2rem',
+              marginBottom: '1rem',
+              position: 'relative',
+              backgroundColor: 'transparent'
+            }}
+            data-observer-target="true"
+          />
+        )}
         
         {/* Индикатор загрузки */}
         {isLoadingMore && (
